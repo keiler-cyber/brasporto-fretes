@@ -178,8 +178,9 @@ export async function POST(request: NextRequest) {
 }
 
 async function extractFromPDF(pdfBase64: string, fileName: string, cargo: any) {
+  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model,
     max_tokens: 2048,
     messages: [
       {
@@ -212,8 +213,9 @@ async function extractFromEmailContent(
   fileName: string,
   cargo: any
 ) {
+  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model,
     max_tokens: 2048,
     messages: [
       {
