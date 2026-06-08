@@ -249,7 +249,7 @@ export default function UploadPage() {
                 onUploadComplete={handleQuotesUploaded}
                 onError={setError}
                 cargo={cargo}
-                buttonLabel="Selecionar Arquivos (PDF)"
+                buttonLabel="Selecionar Arquivos (PDF, EML, MSG)"
               />
               <button onClick={() => setStep('review-request')} className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600">
                 ← Voltar
