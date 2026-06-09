@@ -83,7 +83,7 @@ export async function extractContentFromEmail(parsedEmail: ParsedEmail): Promise
   textContent: string;
 }> {
   const pdfAttachments = parsedEmail.attachments
-    .filter((att) => att.contentType.includes('pdf'))
+    .filter((att) => att.contentType.includes('pdf') || att.filename.toLowerCase().endsWith('.pdf'))
     .map((att) => ({ filename: att.filename, buffer: att.content }));
 
   // Se não houver PDF, usar o conteúdo do email (texto ou HTML)

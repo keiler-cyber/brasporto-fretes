@@ -190,9 +190,12 @@ export default function UploadPage() {
           <span className="text-gray-300">|</span>
           <span className="text-sm text-gray-600 font-medium">Upload de Documentos</span>
           <span className="text-xs text-gray-400 ml-1">Siga as etapas para registrar o pedido e as cotações concorrentes.</span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-4">
             <button onClick={() => router.push('/dashboard')} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
-              ← Voltar
+              ← Dashboard
+            </button>
+            <button onClick={() => router.push('/login')} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+              ← Login
             </button>
           </div>
         </div>

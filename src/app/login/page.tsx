@@ -242,7 +242,7 @@ export default function LoginPage() {
             <p className="text-xs">Acesso restrito a colaboradores</p>
           </div>
 
-          <p className="mt-4 text-center text-[10px] text-gray-300 font-mono">v26.06.01</p>
+          <p className="mt-4 text-center text-xs text-gray-400 font-mono tracking-wider">v26.06.01</p>
         </div>
       </div>
 
