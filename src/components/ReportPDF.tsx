@@ -2,6 +2,7 @@
 
 import { CargoDetails, Quotation } from '@/lib/types';
 import { getTotalCost } from '@/lib/scoring';
+import { generateJustification } from '@/lib/justification';
 import { formatDate } from '@/lib/utils';
 import { Document, Page, Text, View, StyleSheet, Image as PDFImage } from '@react-pdf/renderer';
 
@@ -326,7 +327,7 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
               <View key={q.id}>
                 <View style={isBest ? s.tRowBest : i % 2 === 0 ? s.tRow : s.tRowAlt}>
                   <View style={s.cAgent}>
-                    <Text style={[s.tdL, isBest ? { fontWeight: 'bold', color: GOLD } : {}]}>{isBest ? '★ ' : `#${q.ranking} `}{d.agentName}</Text>
+                    <Text style={[s.tdL, isBest ? { fontWeight: 'bold', color: GOLD } : {}]}>{isBest ? '★ ' : ''}{d.agentName}</Text>
                     {d.carrier && (
                       <Text style={{ fontSize: 6.5, color: TEAL, fontWeight: 'bold', marginTop: 1.5 }}>
                         {d.carrier}
@@ -428,6 +429,10 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                       <Text style={[s.decValue, l === 'Score Operacional:' ? { color: sc(best.score ?? 0) } : l === 'Elegível:' ? { color: GREEN } : l === 'Taxas Brasil:' ? { color: '#16a34a' } : {}]}>{v}</Text>
                     </View>
                   ))}
+                  <View style={{ marginTop: 4, padding: 3, backgroundColor: GOLD_BG, borderRadius: 2, borderLeftWidth: 2, borderLeftColor: GOLD }}>
+                    <Text style={{ fontSize: 5.5, color: '#92400e', fontWeight: 'bold' }}>JUSTIFICATIVA (Score 50% Custo · 30% Prazo · 20% Operacional):</Text>
+                    <Text style={{ fontSize: 5.5, color: '#1e293b', marginTop: 2 }}>{generateJustification(best, sorted)}</Text>
+                  </View>
                 </View>
                 {/* Segundo */}
                 {second && (

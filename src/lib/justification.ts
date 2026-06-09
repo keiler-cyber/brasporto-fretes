@@ -22,17 +22,19 @@ export function generateJustification(quote: Quotation, allQuotations: Quotation
   const reasons: string[] = [];
 
   if (pos === 1) {
-    // Melhor opção — explicar claramente o porquê
     if (isCheapest && isFastest) {
-      reasons.push(`menor custo total (${d.currency} ${total.toFixed(2)}) E menor transit time (${d.transitTime} dias) entre todas as opções`);
+      reasons.push(`MENOR CUSTO (${d.currency} ${total.toFixed(2)}) e MENOR TRANSIT TIME (${d.transitTime}d) — melhor em todos os critérios`);
     } else if (isCheapest) {
-      reasons.push(`menor custo total: ${d.currency} ${total.toFixed(2)}`);
+      reasons.push(`MENOR CUSTO TOTAL: ${d.currency} ${total.toFixed(2)}`);
       if (d.transitTime) reasons.push(`transit time de ${d.transitTime} dias`);
     } else if (isFastest) {
-      reasons.push(`menor transit time: ${d.transitTime} dia${d.transitTime === 1 ? '' : 's'}`);
-      if (costDiff) reasons.push(`custo ${costDiff}% acima do mais barato, compensado pela velocidade`);
+      reasons.push(`MENOR TRANSIT TIME: ${d.transitTime} dias`);
+      if (costDiff) reasons.push(`NÃO é o menor frete (${costDiff}% acima do mais barato) — selecionado pelo prazo mais curto`);
     } else {
-      reasons.push(`melhor combinação entre custo (${d.currency} ${total.toFixed(2)}) e prazo (${d.transitTime ?? '—'} dias)`);
+      const cheapestAgent = sameCur.find(q => getTotalCost(q.extractedData) === minCost);
+      const cheapName = cheapestAgent?.extractedData.agentName?.split(' - ')[0] ?? '';
+      reasons.push(`NÃO é o menor frete — custo ${costDiff}% acima de ${cheapName} (${d.currency} ${minCost.toFixed(2)})`);
+      reasons.push(`selecionado pela melhor combinação de prazo e condições operacionais (score 50/30/20)`);
     }
   } else {
     // Demais posições
