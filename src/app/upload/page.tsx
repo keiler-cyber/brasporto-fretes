@@ -93,12 +93,25 @@ export default function UploadPage() {
     setError('');
     setExtractingRequest(true);
     try {
-      const base64 = await convertFileToBase64(files[0]);
-      const res = await fetch('/api/extract-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfBase64: base64 }),
-      });
+      const file = files[0];
+      const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      const base64 = await convertFileToBase64(file);
+
+      let res: Response;
+      if (ext === '.eml' || ext === '.msg') {
+        res = await fetch('/api/extract-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileBase64: base64, fileName: file.name, fileType: ext === '.msg' ? 'msg' : 'eml' }),
+        });
+      } else {
+        res = await fetch('/api/extract-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdfBase64: base64 }),
+        });
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao extrair pedido');
       setCargo(data as CargoDetails);
@@ -344,12 +357,12 @@ function RequestDropzone({ loading, onFile, error }: { loading: boolean; onFile:
       <div
         onDragOver={e => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
-        onDrop={e => { e.preventDefault(); setDrag(false); const f = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf'); if (f.length) onFile(f); }}
+        onDrop={e => { e.preventDefault(); setDrag(false); const f = Array.from(e.dataTransfer.files).filter(f => { const ext = f.name.toLowerCase().slice(f.name.lastIndexOf('.')); return ['.pdf','.eml','.msg'].includes(ext); }); if (f.length) onFile(f); }}
         className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${drag ? 'border-[#4A9BAA] bg-[#f0f9fb]' : 'border-gray-200 bg-gray-50 hover:border-[#4A9BAA]'} ${loading ? 'opacity-60 pointer-events-none' : ''}`}
         onClick={() => document.getElementById('request-file-input')?.click()}
       >
-        <input id="request-file-input" type="file" accept=".pdf" className="hidden"
-          onChange={e => { const f = Array.from(e.target.files || []).filter(f => f.type === 'application/pdf'); if (f.length) onFile(f); }} />
+        <input id="request-file-input" type="file" accept=".pdf,.eml,.msg" className="hidden"
+          onChange={e => { const f = Array.from(e.target.files || []); if (f.length) onFile(f); }} />
         {loading ? (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="w-10 h-10 text-[#4A9BAA] animate-spin" />
@@ -361,9 +374,9 @@ function RequestDropzone({ loading, onFile, error }: { loading: boolean; onFile:
               <FileText className="w-8 h-8 text-[#4A9BAA]" />
             </div>
             <p className="text-gray-700 font-medium">Upload do Pedido (Load Request)</p>
-            <p className="text-sm text-gray-400">Arraste um PDF ou clique para buscar em seu computador.</p>
+            <p className="text-sm text-gray-400">Arraste um PDF, EML ou MSG ou clique para buscar.</p>
             <button className="mt-2 px-6 py-2.5 bg-[#4A9BAA] text-white rounded-lg text-sm font-medium hover:bg-[#3d8594] transition">
-              Selecionar Arquivo PDF
+              Selecionar Arquivo (PDF, EML, MSG)
             </button>
           </div>
         )}

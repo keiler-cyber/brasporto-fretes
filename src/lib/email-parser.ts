@@ -1,6 +1,5 @@
 import { simpleParser } from 'mailparser';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const MsgParser = require('msg-parser');
+import MsgReader from '@kenjiuno/msgreader';
 
 export interface ParsedEmail {
   from?: string;
@@ -47,25 +46,27 @@ export async function parseEML(buffer: Buffer): Promise<ParsedEmail> {
  */
 export async function parseMSG(buffer: Buffer): Promise<ParsedEmail> {
   try {
-    const msg = await MsgParser(buffer);
-    
+    const reader = new MsgReader(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+    const msg = reader.getFileData();
+
     const attachments = [];
     if (msg.attachments && Array.isArray(msg.attachments)) {
       for (const att of msg.attachments) {
+        const attData = reader.getAttachment(att);
         attachments.push({
-          filename: att.filename || 'attachment',
-          content: att.content || Buffer.alloc(0),
-          contentType: att.contentType || 'application/octet-stream',
+          filename: att.fileName || att.name || 'attachment',
+          content: Buffer.from(attData.content as Uint8Array),
+          contentType: 'application/octet-stream',
         });
       }
     }
 
     return {
       from: msg.senderName || msg.senderEmail,
-      to: msg.recipientName || msg.recipientEmail,
+      to: msg.recipients?.[0]?.name || msg.recipients?.[0]?.email,
       subject: msg.subject,
-      text: msg.textBody,
-      html: msg.htmlBody,
+      text: msg.body,
+      html: undefined,
       attachments,
     };
   } catch (error) {
