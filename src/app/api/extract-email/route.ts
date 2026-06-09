@@ -9,9 +9,11 @@ const EXTRACTION_PROMPT = `INSTRUÇÕES: Retorne SOMENTE JSON válido. Zero text
 
 Você extrai dados de cotações de frete para a BRASPORTO (importador). O agente é SEMPRE quem envia a cotação, NUNCA a Brasporto.
 
-IMPORTANTE: Você pode receber:
-1. Um PDF anexado ao email (processar normalmente)
-2. O conteúdo do email em texto/HTML (extrair dados de tabelas ou parágrafos)
+IMPORTANTE: Você pode receber conteúdo de email em texto/HTML.
+- Extrair dados de TODAS as tabelas de tarifas presentes (cada cia aérea ou armador = 1 item)
+- Ignorar completamente emails anteriores da thread (reply chain abaixo de "From:", "De:", "-----Original Message-----")
+- O AGENTE é quem ENVIOU o email (remetente), nunca a Brasporto. Use o domínio do email remetente como nome da empresa se não houver nome de empresa explícito
+- Dimensões em POLEGADAS (IN): converter para CM multiplicando por 2,54 antes de calcular peso cubado
 
 ═══ CÁLCULO DO PESO EFETIVO (AÉREO) ═══
 
@@ -181,6 +183,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nenhum conteúdo útil encontrado no email ou nos anexos' }, { status: 400 });
     }
     const extracted = await extractFromEmailContent(textContent, fileName, cargo);
+
+    // Filtrar itens em branco
+    if (extracted?.multiple && Array.isArray(extracted.items)) {
+      const useful = extracted.items.filter(isUseful);
+      if (useful.length === 0) return NextResponse.json({ error: 'Nenhuma cotação válida encontrada no corpo do email' }, { status: 400 });
+      return NextResponse.json(useful.length === 1 ? useful[0] : { multiple: true, items: useful });
+    }
     return NextResponse.json(extracted);
   } catch (error: any) {
     console.error('Extract email error:', error);
