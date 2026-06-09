@@ -149,23 +149,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Se há PDFs, processar cada um
+    const isUseful = (data: any) => data && data.agentName && data.agentName.trim() !== '' && data.baseCost > 0;
+
+    // Se há PDFs, tentar extrair de cada um
     if (pdfAttachments.length > 0) {
       const results = [];
       for (const pdfAtt of pdfAttachments) {
         const pdfBase64 = pdfAtt.buffer.toString('base64');
-        const extractedData = await extractFromPDF(pdfBase64, pdfAtt.filename, cargo);
-        results.push(extractedData);
+        try {
+          const extractedData = await extractFromPDF(pdfBase64, pdfAtt.filename, cargo);
+          // Se o PDF retornou array, verificar se os itens são úteis
+          if (extractedData?.multiple && Array.isArray(extractedData.items)) {
+            const useful = extractedData.items.filter(isUseful);
+            if (useful.length > 0) results.push(...useful);
+          } else if (isUseful(extractedData)) {
+            results.push(extractedData);
+          }
+        } catch {
+          // PDF falhou, continuar para tentar corpo do email
+        }
       }
 
-      if (results.length === 1) {
-        return NextResponse.json(results[0]);
+      // Se algum PDF retornou dados úteis, usar esses resultados
+      if (results.length > 0) {
+        return NextResponse.json(results.length === 1 ? results[0] : { multiple: true, items: results });
       }
-
-      return NextResponse.json({ multiple: true, items: results });
     }
 
-    // Caso contrário, extrair do conteúdo de texto/HTML do email
+    // Nenhum PDF útil — extrair do corpo do email
+    if (!textContent) {
+      return NextResponse.json({ error: 'Nenhum conteúdo útil encontrado no email ou nos anexos' }, { status: 400 });
+    }
     const extracted = await extractFromEmailContent(textContent, fileName, cargo);
     return NextResponse.json(extracted);
   } catch (error: any) {
