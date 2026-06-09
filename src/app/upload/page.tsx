@@ -99,10 +99,10 @@ export default function UploadPage() {
 
       let res: Response;
       if (ext === '.eml' || ext === '.msg') {
-        res = await fetch('/api/extract-email', {
+        res = await fetch('/api/extract-request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileBase64: base64, fileName: file.name, fileType: ext === '.msg' ? 'msg' : 'eml' }),
+          body: JSON.stringify({ fileBase64: base64, fileType: ext === '.msg' ? 'msg' : 'eml' }),
         });
       } else {
         res = await fetch('/api/extract-request', {
@@ -377,7 +377,7 @@ function RequestDropzone({ loading, onFile, error }: { loading: boolean; onFile:
               <FileText className="w-8 h-8 text-[#4A9BAA]" />
             </div>
             <p className="text-gray-700 font-medium">Upload do Pedido (Load Request)</p>
-            <p className="text-sm text-gray-400">Arraste um PDF, EML ou MSG ou clique para buscar.</p>
+            <p className="text-sm text-gray-400">Arraste e solte aqui — PDF, email EML ou MSG do Outlook.</p>
             <button className="mt-2 px-6 py-2.5 bg-[#4A9BAA] text-white rounded-lg text-sm font-medium hover:bg-[#3d8594] transition">
               Selecionar Arquivo (PDF, EML, MSG)
             </button>

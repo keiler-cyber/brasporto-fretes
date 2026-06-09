@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { parseEML, parseMSG, extractContentFromEmail } from '@/lib/email-parser';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -55,20 +56,34 @@ function parseJSON(text: string): any {
 
 export async function POST(request: NextRequest) {
   try {
-    const { pdfBase64 } = await request.json();
-    if (!pdfBase64) return NextResponse.json({ error: 'PDF não fornecido' }, { status: 400 });
+    const body = await request.json();
+    const { pdfBase64, fileBase64, fileType } = body;
 
     const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+    let messageContent: Anthropic.MessageParam['content'];
+
+    if (fileBase64 && fileType) {
+      // Email (EML ou MSG): extrair texto do corpo
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const parsed = fileType === 'msg' ? await parseMSG(buffer) : await parseEML(buffer);
+      const { textContent } = await extractContentFromEmail(parsed);
+
+      if (!textContent) return NextResponse.json({ error: 'Nenhum conteúdo encontrado no email' }, { status: 400 });
+
+      messageContent = `${PROMPT}\n\n═══ CONTEÚDO DO EMAIL ═══\n\n${textContent}`;
+    } else if (pdfBase64) {
+      messageContent = [
+        { type: 'text', text: PROMPT },
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+      ];
+    } else {
+      return NextResponse.json({ error: 'Arquivo não fornecido' }, { status: 400 });
+    }
+
     const response = await client.messages.create({
       model,
       max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: PROMPT },
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-        ],
-      }],
+      messages: [{ role: 'user', content: messageContent }],
     });
 
     const content = response.content[0];
