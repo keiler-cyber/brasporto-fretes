@@ -1,5 +1,6 @@
 import { simpleParser } from 'mailparser';
-import * as MsgParser from 'msg-parser';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const MsgParser = require('msg-parser');
 
 export interface ParsedEmail {
   from?: string;
@@ -33,10 +34,10 @@ export async function parseEML(buffer: Buffer): Promise<ParsedEmail> {
 
   return {
     from: parsed.from?.text,
-    to: parsed.to?.text,
+    to: Array.isArray(parsed.to) ? parsed.to[0]?.text : parsed.to?.text,
     subject: parsed.subject,
     text: parsed.text,
-    html: parsed.html,
+    html: parsed.html || undefined,
     attachments,
   };
 }
@@ -46,7 +47,7 @@ export async function parseEML(buffer: Buffer): Promise<ParsedEmail> {
  */
 export async function parseMSG(buffer: Buffer): Promise<ParsedEmail> {
   try {
-    const msg = await MsgParser.default(buffer);
+    const msg = await MsgParser(buffer);
     
     const attachments = [];
     if (msg.attachments && Array.isArray(msg.attachments)) {
