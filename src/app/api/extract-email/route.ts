@@ -204,6 +204,11 @@ export async function POST(request: NextRequest) {
 
 async function extractFromPDF(pdfBase64: string, fileName: string, cargo: any) {
   const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+
+  const cargoContext = cargo?.billedWeight
+    ? `\nCONTEXTO DA CARGA:\n- Peso taxado: ${cargo.billedWeight} kg\n- Origem: ${cargo.origin || ''} → Destino: ${cargo.destination || ''}${cargo.merchandiseValue ? `\n- Valor da mercadoria: ${cargo.merchandiseValue}` : ''}\n`
+    : '';
+
   const message = await client.messages.create({
     model,
     max_tokens: 8192,
@@ -217,7 +222,7 @@ async function extractFromPDF(pdfBase64: string, fileName: string, cargo: any) {
           },
           {
             type: 'text',
-            text: EXTRACTION_PROMPT,
+            text: EXTRACTION_PROMPT + cargoContext,
           },
         ],
       },
@@ -239,13 +244,18 @@ async function extractFromEmailContent(
   cargo: any
 ) {
   const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+
+  const cargoContext = cargo?.billedWeight
+    ? `\nCONTEXTO DA CARGA:\n- Peso taxado: ${cargo.billedWeight} kg\n- Origem: ${cargo.origin || ''} → Destino: ${cargo.destination || ''}${cargo.merchandiseValue ? `\n- Valor da mercadoria: ${cargo.merchandiseValue}` : ''}\n`
+    : '';
+
   const message = await client.messages.create({
     model,
-    max_tokens: 2048,
+    max_tokens: 8192,
     messages: [
       {
         role: 'user',
-        content: `${EXTRACTION_PROMPT}\n\n═══ CONTEÚDO DO EMAIL ═══\n\n${textContent}`,
+        content: `${EXTRACTION_PROMPT}${cargoContext}\n\n═══ CONTEÚDO DO EMAIL ═══\n\n${textContent}`,
       },
     ],
   });
@@ -254,7 +264,7 @@ async function extractFromEmailContent(
   if (content.type !== 'text') throw new Error('Resposta inesperada do Claude');
 
   const parsed = parseJSON(content.text);
-  if (!parsed) throw new Error('Falha ao extrair dados do email');
+  if (!parsed) throw new Error(`Falha ao extrair dados do email. Resposta: ${content.text.slice(0, 200)}`);
 
   return parsed;
 }
