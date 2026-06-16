@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Quotation } from '@/lib/types';
 import { getTotalCost } from '@/lib/scoring';
 import { volumetricWeightFromVolume, billedWeight } from '@/lib/volumetric';
-import { ArrowLeft, Trophy, Award, Star, Loader2, AlertCircle, Download } from 'lucide-react';
+import { ArrowLeft, Trophy, Award, Star, Loader2, AlertCircle, Download, Plus, Hash } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { ReportPDF } from '@/components/ReportPDF';
@@ -157,9 +157,30 @@ export default function QuotationDetailPage() {
             Dashboard
           </button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">Detalhes da Cotação</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-gray-900">Detalhes da Cotação</h1>
+              {quotation.sessionRef && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-[#4A9BAA] text-white rounded-full text-xs font-bold font-mono">
+                  <Hash className="w-3 h-3" />{quotation.sessionRef}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-500">{quotation.originalFileName}</p>
           </div>
+          {/* Continuar análise */}
+          <button
+            onClick={() => {
+              const sessionRef = quotation.sessionRef || '';
+              localStorage.setItem('bp_continue_session', JSON.stringify({
+                quotations: pdfQuotations,
+                sessionRef,
+              }));
+              router.push('/upload?continue=true');
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-[#4A9BAA] hover:bg-[#3d8594] text-white rounded-lg text-sm font-semibold transition"
+          >
+            <Plus className="w-4 h-4" /> Adicionar Cotações
+          </button>
           {/* Botão de download do relatório PDF */}
           <PDFDownloadLink
             document={<ReportPDF quotations={pdfQuotations} />}

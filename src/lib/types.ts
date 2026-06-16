@@ -76,6 +76,7 @@ export interface Quotation {
   score?: number;
   ranking?: number; // posição no ranking geral (1 = melhor)
   status: 'PENDING_REVIEW' | 'CONFIRMED' | 'RANKED';
+  sessionRef?: string; // Nº da cotação Brasporto, ex: "6620/26 – AIR"
 }
 
 export interface ScoringCriteria {

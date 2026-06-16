@@ -105,6 +105,7 @@ export default function Dashboard() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Pos.</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nº Cotação</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Data</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Agente</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Modal</th>
@@ -122,6 +123,11 @@ export default function Dashboard() {
                           <RankIcon r={q.ranking} />
                           <span className="text-xs text-gray-500">#{q.ranking ?? '—'}</span>
                         </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        {q.sessionRef
+                          ? <span className="font-mono text-xs text-[#4A9BAA] font-bold">{q.sessionRef}</span>
+                          : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-5 py-3 text-gray-500">{formatDate(q.createdAt)}</td>
                       <td className="px-5 py-3 font-medium text-gray-900">{q.extractedData.agentName}</td>

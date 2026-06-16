@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -14,16 +14,16 @@ import { RankingDisplay } from '@/components/RankingDisplay';
 import { ReportPDF } from '@/components/ReportPDF';
 import { BrasportoLogo } from '@/components/BrasportoLogo';
 import { PDFDownloadLink } from '@react-pdf/renderer';
-import { Loader2, AlertCircle, ArrowLeft, Mail, FileText, CheckSquare, BarChart2, Trophy } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Mail, FileText, CheckSquare, Trophy, Hash } from 'lucide-react';
 
 type Step = 'request' | 'review-request' | 'quotes' | 'review-quotes' | 'ranking' | 'report';
 
 const STEPS = [
-  { id: 'request',        label: '1. SOLICITAÇÃO\nDO CLIENTE',       icon: Mail },
-  { id: 'review-request', label: '2. CONFERÊNCIA\nLOGÍSTICA',        icon: FileText },
-  { id: 'quotes',         label: '3. COTAÇÕES\nDOS AGENTES',         icon: FileText },
-  { id: 'review-quotes',  label: '4. VALIDAÇÃO E\nCOMPARAÇÃO',       icon: CheckSquare },
-  { id: 'ranking',        label: '5. DECISÃO',                        icon: Trophy },
+  { id: 'request',        label: '1. SOLICITAÇÃO\nDO CLIENTE',  icon: Mail },
+  { id: 'review-request', label: '2. CONFERÊNCIA\nLOGÍSTICA',   icon: FileText },
+  { id: 'quotes',         label: '3. COTAÇÕES\nDOS AGENTES',    icon: FileText },
+  { id: 'review-quotes',  label: '4. VALIDAÇÃO E\nCOMPARAÇÃO',  icon: CheckSquare },
+  { id: 'ranking',        label: '5. DECISÃO',                   icon: Trophy },
 ];
 
 function ProgressBar({ current }: { current: Step }) {
@@ -39,7 +39,7 @@ function ProgressBar({ current }: { current: Step }) {
             <div className="flex flex-col items-center">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
                 active ? 'border-[#4A9BAA] bg-[#4A9BAA] text-white' :
-                done ? 'border-[#4A9BAA] bg-[#4A9BAA] text-white' :
+                done  ? 'border-[#4A9BAA] bg-[#4A9BAA] text-white' :
                 'border-gray-200 bg-white text-gray-300'
               }`}>
                 <Icon className="w-4 h-4" />
@@ -69,6 +69,7 @@ function convertFileToBase64(file: File): Promise<string> {
 
 export default function UploadPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
   const [step, setStep] = useState<Step>('request');
@@ -77,10 +78,29 @@ export default function UploadPage() {
   const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
   const [allQuotations, setAllQuotations] = useState<Quotation[]>([]);
   const [isAddingMore, setIsAddingMore] = useState(false);
+  const [sessionRef, setSessionRef] = useState(''); // Nº da cotação, ex: "6620/26 – AIR"
   const [reportFileName, setReportFileName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [extractingRequest, setExtractingRequest] = useState(false);
+
+  // ─── Modo "continuar análise" vindo do histórico ──────────────────────────
+  useEffect(() => {
+    if (searchParams?.get('continue') !== 'true') return;
+    try {
+      const raw = localStorage.getItem('bp_continue_session');
+      if (!raw) return;
+      const { quotations: prev, sessionRef: ref } = JSON.parse(raw) as {
+        quotations: Quotation[];
+        sessionRef: string;
+      };
+      localStorage.removeItem('bp_continue_session');
+      setAllQuotations(prev);
+      setSessionRef(ref || '');
+      setIsAddingMore(true);
+      setStep('quotes');
+    } catch {}
+  }, [searchParams]);
 
   if (authLoading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -89,7 +109,7 @@ export default function UploadPage() {
   );
   if (!user) { router.push('/login'); return null; }
 
-  // ─── Step 1: Upload do pedido do cliente ───────────────────────────────────
+  // ─── Step 1: Upload do pedido ─────────────────────────────────────────────
   const handleRequestUpload = async (files: File[]) => {
     if (files.length === 0) return;
     setError('');
@@ -99,21 +119,15 @@ export default function UploadPage() {
       const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
       const base64 = await convertFileToBase64(file);
 
-      let res: Response;
-      if (ext === '.eml' || ext === '.msg') {
-        res = await fetch('/api/extract-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileBase64: base64, fileType: ext === '.msg' ? 'msg' : 'eml' }),
-        });
-      } else {
-        res = await fetch('/api/extract-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pdfBase64: base64 }),
-        });
-      }
-
+      const res = await fetch('/api/extract-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          ext === '.eml' || ext === '.msg'
+            ? { fileBase64: base64, fileType: ext === '.msg' ? 'msg' : 'eml' }
+            : { pdfBase64: base64 }
+        ),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao extrair pedido');
       setCargo(data as CargoDetails);
@@ -125,7 +139,7 @@ export default function UploadPage() {
     }
   };
 
-  // ─── Step 3: Upload das cotações dos agentes ───────────────────────────────
+  // ─── Step 3: Upload das cotações ──────────────────────────────────────────
   const handleQuotesUploaded = (results: { file: File; extractedData: ExtractionData }[]) => {
     setQuoteFiles(results.map(r => r.file));
     setQuotations(results.map(r => r.extractedData));
@@ -133,7 +147,7 @@ export default function UploadPage() {
     setStep('review-quotes');
   };
 
-  // ─── Adicionar mais cotações ao ranking existente ──────────────────────────
+  // ─── Adicionar mais cotações ao ranking existente ─────────────────────────
   const handleAddMore = () => {
     setQuotations([]);
     setQuoteFiles([]);
@@ -142,17 +156,16 @@ export default function UploadPage() {
     setStep('quotes');
   };
 
-  // ─── Step 4: Confirmar e calcular ranking ──────────────────────────────────
+  // ─── Step 4: Confirmar e calcular ranking ─────────────────────────────────
   const handleConfirm = async () => {
     if (quotations.length === 0 || !user) return;
     setLoading(true);
     try {
-      // Se estiver adicionando mais, combinar com as cotações já confirmadas
       const prevExtracted = isAddingMore ? allQuotations.map(q => q.extractedData) : [];
-      const prevFiles = isAddingMore ? allQuotations.map(q => ({ name: q.originalFileName })) : [];
+      const prevFiles     = isAddingMore ? allQuotations.map(q => ({ name: q.originalFileName })) : [];
 
       const allExtracted = [...prevExtracted, ...quotations];
-      const allFiles = [...prevFiles, ...quoteFiles];
+      const allFiles     = [...prevFiles, ...quoteFiles];
 
       const scores = calculateScoring(allExtracted);
       const ranking = getRanking(scores);
@@ -174,6 +187,7 @@ export default function UploadPage() {
           score: getScoreByIndex(idx, scores),
           ranking: positionOf(idx),
           status: 'RANKED' as const,
+          sessionRef: sessionRef.trim() || existing?.sessionRef || '',
         };
       });
 
@@ -190,6 +204,7 @@ export default function UploadPage() {
         score: q.score,
         ranking: q.ranking,
         status: q.status,
+        sessionRef: q.sessionRef || '',
       })));
 
       setIsAddingMore(false);
@@ -200,6 +215,8 @@ export default function UploadPage() {
       setLoading(false);
     }
   };
+
+  const effectiveSessionRef = sessionRef.trim() || allQuotations[0]?.sessionRef || '';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -212,13 +229,14 @@ export default function UploadPage() {
           <BrasportoLogo size="sm" />
           <span className="text-gray-300">|</span>
           <span className="text-sm text-gray-600 font-medium">Upload de Documentos</span>
-          <span className="text-xs text-gray-400 ml-1">Siga as etapas para registrar o pedido e as cotações concorrentes.</span>
+          {effectiveSessionRef && (
+            <span className="flex items-center gap-1 px-2.5 py-0.5 bg-[#4A9BAA] text-white rounded-full text-xs font-bold font-mono">
+              <Hash className="w-3 h-3" />{effectiveSessionRef}
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-4">
-            <button onClick={() => router.push('/dashboard')} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
+            <button onClick={() => router.push('/dashboard')} className="text-xs text-gray-500 hover:text-gray-700">
               ← Dashboard
-            </button>
-            <button onClick={() => router.push('/login')} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-              ← Login
             </button>
           </div>
         </div>
@@ -228,7 +246,6 @@ export default function UploadPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <ProgressBar current={step} />
 
-          {/* Error */}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -246,11 +263,7 @@ export default function UploadPage() {
                 <h2 className="text-lg font-bold text-gray-900">Upload do Pedido (Load Request)</h2>
                 <p className="text-sm text-gray-500 mt-1">Arraste um PDF ou clique para buscar em seu computador.</p>
               </div>
-              <RequestDropzone
-                loading={extractingRequest}
-                onFile={handleRequestUpload}
-                error={error}
-              />
+              <RequestDropzone loading={extractingRequest} onFile={handleRequestUpload} />
             </div>
           )}
 
@@ -269,7 +282,7 @@ export default function UploadPage() {
                 <button
                   onClick={() => setStep('quotes')}
                   disabled={!cargo.origin || !cargo.destination || (!cargo.weight && !cargo.containerType)}
-                  className="flex-1 px-4 py-3 bg-[#4A9BAA] hover:bg-[#3d8594] disabled:bg-gray-300 text-white rounded-xl transition text-sm font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-[#4A9BAA] hover:bg-[#3d8594] disabled:bg-gray-300 text-white rounded-xl transition text-sm font-medium"
                 >
                   Salvar Pedido e Avançar →
                 </button>
@@ -277,10 +290,31 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* ── STEP 3: Upload cotações dos agentes ── */}
+          {/* ── STEP 3: Upload cotações ── */}
           {step === 'quotes' && (
             <div className="max-w-xl mx-auto">
-              <div className="text-center mb-6">
+              {/* Nº da Cotação Brasporto */}
+              <div className="mb-6 p-4 bg-[#f0f9fb] border border-[#4A9BAA]/30 rounded-xl">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-[#003d4d] uppercase tracking-wide mb-2">
+                  <Hash className="w-3.5 h-3.5" /> Nº da Cotação Brasporto
+                </label>
+                <input
+                  type="text"
+                  value={sessionRef}
+                  onChange={e => setSessionRef(e.target.value)}
+                  placeholder="ex: 6620/26 – AIR"
+                  className="w-full px-3 py-2 border border-[#4A9BAA]/40 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#4A9BAA] bg-white placeholder-gray-400"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Será gravado com todas as cotações deste lote e usado como nome do PDF.</p>
+              </div>
+
+              {isAddingMore && allQuotations.length > 0 && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-medium">
+                  Adicionando ao lote existente com {allQuotations.length} cotação(ões). Os novos arquivos serão comparados junto com as anteriores.
+                </div>
+              )}
+
+              <div className="text-center mb-4">
                 <h2 className="text-lg font-bold text-gray-900">Upload de Cotações</h2>
                 <p className="text-sm text-gray-500 mt-1">Arraste os PDFs das cotações concorrentes ou clique para selecioná-los.</p>
               </div>
@@ -302,7 +336,8 @@ export default function UploadPage() {
               <div className="mb-6">
                 <h2 className="text-lg font-bold text-gray-900">Revisar Cotações e Coerência</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Verifique as cotações extraídas antes de salvar. {quotations.length} cotação(ões) extraída(s).
+                  {quotations.length} cotação(ões) extraída(s).
+                  {isAddingMore && ` Serão somadas às ${allQuotations.length} existentes.`}
                 </p>
               </div>
               <div className="space-y-4">
@@ -338,8 +373,11 @@ export default function UploadPage() {
             <RankingDisplay
               quotations={allQuotations}
               onGenerateReport={() => {
-                const ref = cargo?.clientRef ? `${cargo.clientRef}-` : '';
-                setReportFileName(`brasporto-cotacoes-${ref}${new Date().toISOString().split('T')[0]}`);
+                const ref = effectiveSessionRef || cargo?.clientRef || '';
+                setReportFileName(ref
+                  ? `${ref.replace(/[/\\:*?"<>|]/g, '-')}`
+                  : `brasporto-cotacoes-${new Date().toISOString().split('T')[0]}`
+                );
                 setStep('report');
               }}
               onAddMore={handleAddMore}
@@ -396,16 +434,18 @@ export default function UploadPage() {
 }
 
 // ─── Dropzone simples para o pedido ──────────────────────────────────────────
-function RequestDropzone({ loading, onFile, error }: { loading: boolean; onFile: (f: File[]) => void; error: string }) {
+function RequestDropzone({ loading, onFile }: { loading: boolean; onFile: (f: File[]) => void }) {
   const [drag, setDrag] = useState(false);
-  const ref = useState<HTMLInputElement | null>(null);
-
   return (
     <div>
       <div
         onDragOver={e => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
-        onDrop={e => { e.preventDefault(); setDrag(false); const f = Array.from(e.dataTransfer.files).filter(f => { const ext = f.name.toLowerCase().slice(f.name.lastIndexOf('.')); return ['.pdf','.eml','.msg'].includes(ext); }); if (f.length) onFile(f); }}
+        onDrop={e => {
+          e.preventDefault(); setDrag(false);
+          const f = Array.from(e.dataTransfer.files).filter(f => ['.pdf','.eml','.msg'].includes(f.name.toLowerCase().slice(f.name.lastIndexOf('.'))));
+          if (f.length) onFile(f);
+        }}
         className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${drag ? 'border-[#4A9BAA] bg-[#f0f9fb]' : 'border-gray-200 bg-gray-50 hover:border-[#4A9BAA]'} ${loading ? 'opacity-60 pointer-events-none' : ''}`}
         onClick={() => document.getElementById('request-file-input')?.click()}
       >
