@@ -102,7 +102,9 @@ export default function LoginPage() {
             <p className="text-white/40 text-xs">
               © {new Date().getFullYear()} Brasporto International Logistics
             </p>
-            <p className="text-white/30 text-xs font-mono">v26.06.03</p>
+            <span className="px-2.5 py-1 bg-[#4A9BAA] text-white text-xs font-bold font-mono rounded-full tracking-widest shadow">
+              v26.06.03
+            </span>
           </div>
         </div>
       </div>
@@ -242,7 +244,11 @@ export default function LoginPage() {
             <p className="text-xs">Acesso restrito a colaboradores</p>
           </div>
 
-          <p className="mt-4 text-center text-xs text-gray-400 font-mono tracking-wider">v26.06.03</p>
+          <div className="mt-4 flex justify-center">
+            <span className="px-3 py-1 bg-[#4A9BAA] text-white text-xs font-bold font-mono rounded-full tracking-widest shadow-sm">
+              v26.06.03
+            </span>
+          </div>
         </div>
       </div>
 
