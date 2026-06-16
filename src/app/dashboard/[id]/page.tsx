@@ -73,10 +73,6 @@ export default function QuotationDetailPage() {
           return;
         }
         const data = snap.data();
-        if (data.userId !== user.uid) {
-          setError('Acesso negado.');
-          return;
-        }
         setQuotation({ id: snap.id, ...data } as Quotation);
       } catch (e: any) {
         setError(e.message || 'Erro ao carregar cotação.');
@@ -192,7 +188,7 @@ export default function QuotationDetailPage() {
         <div className="bg-white rounded-xl shadow p-6">
           <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">Logística</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Field label="Transit Time" value={d.transitTime ? `${d.transitTime} dias` : null} />
+            <Field label="Transit Time" value={d.transitTime ? (d.transitTimeMax && d.transitTimeMax !== d.transitTime ? `${d.transitTime}–${d.transitTimeMax} dias` : `${d.transitTime} dias`) : null} />
             <Field label="ETD" value={d.etd ? formatDate(d.etd) : null} />
             <Field label="Free Time" value={d.freeTime ? `${d.freeTime} dias` : null} />
             <Field label="Modal" value={d.modal} />

@@ -63,14 +63,23 @@ export async function POST(request: NextRequest) {
     let messageContent: Anthropic.MessageParam['content'];
 
     if (fileBase64 && fileType) {
-      // Email (EML ou MSG): extrair texto do corpo
+      // Email (EML ou MSG): tentar PDF anexo primeiro, depois corpo do email
       const buffer = Buffer.from(fileBase64, 'base64');
       const parsed = fileType === 'msg' ? await parseMSG(buffer) : await parseEML(buffer);
-      const { textContent } = await extractContentFromEmail(parsed);
+      const { pdfAttachments, textContent } = await extractContentFromEmail(parsed);
 
-      if (!textContent) return NextResponse.json({ error: 'Nenhum conteúdo encontrado no email' }, { status: 400 });
-
-      messageContent = `${PROMPT}\n\n═══ CONTEÚDO DO EMAIL ═══\n\n${textContent}`;
+      if (pdfAttachments.length > 0) {
+        // Usar o primeiro PDF encontrado no email
+        const pdfBase64 = pdfAttachments[0].buffer.toString('base64');
+        messageContent = [
+          { type: 'text', text: PROMPT },
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+        ];
+      } else if (textContent) {
+        messageContent = `${PROMPT}\n\n═══ CONTEÚDO DO EMAIL ═══\n\n${textContent}`;
+      } else {
+        return NextResponse.json({ error: 'Nenhum conteúdo encontrado no email' }, { status: 400 });
+      }
     } else if (pdfBase64) {
       messageContent = [
         { type: 'text', text: PROMPT },

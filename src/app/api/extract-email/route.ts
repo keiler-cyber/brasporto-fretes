@@ -72,7 +72,9 @@ FORMATO (cada objeto):
   "originCharges": número ou null,
   "destinationCharges": número ou null,
   "otherCharges": número ou null,
-  "transitTime": número (dias, mínimo do range) ou null,
+  "transitTime": número (dias, mínimo do range; ex: "3 a 5 dias" → 3, "7 a 10 dias" → 7) ou null,
+  "transitTimeMax": número (dias, máximo do range; ex: "3 a 5 dias" → 5, "7 a 10 dias" → 10; se não houver range, mesmo valor de transitTime) ou null,
+  "customsCharges": número (fee de customs/desembaraço calculado sobre o valor da mercadoria quando a cotação expressar como percentual — calcular usando o valor da mercadoria informado no cargo. Ex: "0.5% do valor FOB" com mercadoria EUR 100.000 → 500.00. Null se não houver este tipo de cobrança percentual) ou null,
   "etd": "YYYY-MM-DD" ou null,
   "freeTime": número ou null,
   "weight": número (peso bruto da carga) ou null,
@@ -204,7 +206,7 @@ async function extractFromPDF(pdfBase64: string, fileName: string, cargo: any) {
   const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
   const message = await client.messages.create({
     model,
-    max_tokens: 2048,
+    max_tokens: 8192,
     messages: [
       {
         role: 'user',

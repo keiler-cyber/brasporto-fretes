@@ -17,7 +17,8 @@ export function getTotalCost(q: ExtractionData): number {
     (q.pickupCost || 0) +
     (q.originCharges || 0) +
     (q.destinationCharges || 0) +
-    (q.otherCharges || 0)
+    (q.otherCharges || 0) +
+    (q.customsCharges || 0)
   );
 }
 

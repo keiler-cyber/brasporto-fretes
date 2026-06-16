@@ -45,21 +45,8 @@ export function PDFUpload({ onUploadComplete, onError, cargo, buttonLabel = 'Sel
     });
   };
 
-  const convertFileToBuffer = (file: File): Promise<Buffer> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const arrayBuffer = reader.result as ArrayBuffer;
-        resolve(Buffer.from(arrayBuffer));
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
-  };
-
   const extractFromEmail = async (emailFile: File): Promise<UploadResult[]> => {
-    const buffer = await convertFileToBuffer(emailFile);
-    const base64 = buffer.toString('base64');
+    const base64 = await convertFileToBase64(emailFile);
     const fileExt = emailFile.name.toLowerCase().slice(emailFile.name.lastIndexOf('.'));
 
     const response = await fetch('/api/extract-email', {

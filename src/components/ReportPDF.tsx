@@ -362,7 +362,7 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                       </Text>
                     )}
                   </View>
-                  <View style={s.cOp}><Text style={s.td}>{d.transitTime ? `${d.transitTime}d` : '-'}</Text></View>
+                  <View style={s.cOp}><Text style={s.td}>{d.transitTime ? (d.transitTimeMax && d.transitTimeMax !== d.transitTime ? `${d.transitTime}–${d.transitTimeMax}d` : `${d.transitTime}d`) : '-'}</Text></View>
                   <View style={s.cOp}><Text style={[s.td, d.modal === 'AEREO' && d.frequency ? { color: TEAL, fontWeight: 'bold', fontSize: 5.5 } : {}]}>{d.modal === 'AEREO' ? (d.frequency || '-') : '-'}</Text></View>
                   <View style={s.cOp}><Text style={s.td}>{getRoute(d.agentName)}</Text></View>
                   <View style={s.cOp}><Text style={s.td}>{d.etd ? formatDate(d.etd) : '-'}</Text></View>
@@ -420,7 +420,7 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                     ['Rota:', getRoute(best.extractedData.agentName)],
                     ['Total Geral:', `${cur} ${getTotalCost(best.extractedData).toFixed(2)}`],
                     ...(best.extractedData.localChargesBRL ? [['Taxas Brasil:', `R$ ${best.extractedData.localChargesBRL.toFixed(2)}`]] : []),
-                    ['Transit Time:', best.extractedData.transitTime ? `${best.extractedData.transitTime} dias` : '-'],
+                    ['Transit Time:', best.extractedData.transitTime ? (best.extractedData.transitTimeMax && best.extractedData.transitTimeMax !== best.extractedData.transitTime ? `${best.extractedData.transitTime}–${best.extractedData.transitTimeMax} dias` : `${best.extractedData.transitTime} dias`) : '-'],
                     ['Score Operacional:', (best.score ?? 0).toFixed(2)],
                     ['Elegível:', 'SIM'],
                   ].map(([l, v]) => (
@@ -443,7 +443,7 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                       ['Rota:', getRoute(second.extractedData.agentName)],
                       ['Total Geral:', `${cur} ${getTotalCost(second.extractedData).toFixed(2)}`],
                       ...(second.extractedData.localChargesBRL ? [['Taxas Brasil:', `R$ ${second.extractedData.localChargesBRL.toFixed(2)}`]] : []),
-                      ['Transit Time:', second.extractedData.transitTime ? `${second.extractedData.transitTime} dias` : '-'],
+                      ['Transit Time:', second.extractedData.transitTime ? (second.extractedData.transitTimeMax && second.extractedData.transitTimeMax !== second.extractedData.transitTime ? `${second.extractedData.transitTime}–${second.extractedData.transitTimeMax} dias` : `${second.extractedData.transitTime} dias`) : '-'],
                       ['Score Operacional:', (second.score ?? 0).toFixed(2)],
                       ['Elegível:', 'SIM'],
                     ].map(([l, v]) => (

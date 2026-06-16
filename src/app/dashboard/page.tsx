@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { collection, query, where, orderBy, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Quotation } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import Image from 'next/image';
+import { getTotalCost } from '@/lib/scoring';
 import { Upload, Clock, Loader2, Eye, Trophy, Award, Star, LogOut } from 'lucide-react';
 
 export default function Dashboard() {
@@ -113,7 +114,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {quotations.map(q => {
-                  const total = q.extractedData.baseCost + (q.extractedData.pickupCost || 0) + (q.extractedData.originCharges || 0) + (q.extractedData.destinationCharges || 0) + (q.extractedData.otherCharges || 0);
+                  const total = getTotalCost(q.extractedData);
                   return (
                     <tr key={q.id} className={`border-b border-gray-50 hover:bg-gray-50/50 transition ${q.ranking === 1 ? 'bg-yellow-50/30' : ''}`}>
                       <td className="px-5 py-3">

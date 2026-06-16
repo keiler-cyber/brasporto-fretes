@@ -102,7 +102,7 @@ export default function LoginPage() {
             <p className="text-white/40 text-xs">
               © {new Date().getFullYear()} Brasporto International Logistics
             </p>
-            <p className="text-white/30 text-xs font-mono">v26.06.02</p>
+            <p className="text-white/30 text-xs font-mono">v26.06.03</p>
           </div>
         </div>
       </div>
@@ -242,7 +242,7 @@ export default function LoginPage() {
             <p className="text-xs">Acesso restrito a colaboradores</p>
           </div>
 
-          <p className="mt-4 text-center text-xs text-gray-400 font-mono tracking-wider">v26.06.02</p>
+          <p className="mt-4 text-center text-xs text-gray-400 font-mono tracking-wider">v26.06.03</p>
         </div>
       </div>
 

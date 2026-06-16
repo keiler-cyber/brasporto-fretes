@@ -138,7 +138,13 @@ export function ReviewExtraction({
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-1">
               <Clock className="w-3 h-3" /> Transit Time
             </label>
-            <p className="text-sm text-gray-900">{local.transitTime ? `${local.transitTime} dias` : '—'}</p>
+            <p className="text-sm text-gray-900">
+              {local.transitTime
+                ? local.transitTimeMax && local.transitTimeMax !== local.transitTime
+                  ? `${local.transitTime}–${local.transitTimeMax} dias`
+                  : `${local.transitTime} dias`
+                : '—'}
+            </p>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">ETD</label>
@@ -224,6 +230,12 @@ export function ReviewExtraction({
             <p className="font-semibold text-gray-700 text-xs uppercase">Outras Despesas</p>
             <p>{local.otherCharges ? `${local.otherCharges.toFixed(2)} ${local.currency}` : '—'}</p>
           </div>
+          {local.customsCharges ? (
+            <div className="col-span-3 pt-2 border-t border-amber-100">
+              <p className="font-semibold text-amber-700 text-xs uppercase">Customs / Desembaraço (% s/ valor mercadoria)</p>
+              <p className="text-amber-800 font-medium">{local.customsCharges.toFixed(2)} {local.currency}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 

@@ -48,6 +48,8 @@ export interface ExtractionData {
   destinationCharges?: number;
   otherCharges?: number;
   transitTime?: number;
+  transitTimeMax?: number; // máximo do range (ex: "7-10 dias" → 10)
+  customsCharges?: number; // fee de customs calculado sobre valor da mercadoria
   etd?: Date;
   freeTime?: number;
   weight?: number;

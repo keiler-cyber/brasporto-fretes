@@ -3,11 +3,12 @@
 import { Quotation } from '@/lib/types';
 import { getTotalCost } from '@/lib/scoring';
 import { formatDate } from '@/lib/utils';
-import { Download, Trophy, Award, Star } from 'lucide-react';
+import { Download, Trophy, Award, Star, Plus } from 'lucide-react';
 
 interface RankingDisplayProps {
   quotations: Quotation[];
   onGenerateReport: (quotations: Quotation[]) => void;
+  onAddMore?: () => void;
   loading?: boolean;
 }
 
@@ -36,7 +37,7 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function RankingDisplay({ quotations, onGenerateReport, loading = false }: RankingDisplayProps) {
+export function RankingDisplay({ quotations, onGenerateReport, onAddMore, loading = false }: RankingDisplayProps) {
   const sorted = [...quotations].sort((a, b) => (a.ranking ?? 99) - (b.ranking ?? 99));
   const best = sorted[0];
 
@@ -118,7 +119,13 @@ export function RankingDisplay({ quotations, onGenerateReport, loading = false }
                   <Field label="Frete Base" value={`${d.baseCost.toFixed(2)} ${d.currency}`} />
                   {d.originCharges ? <Field label="Tx. Origem" value={`${d.originCharges.toFixed(2)} ${d.currency}`} /> : <Field label="Tx. Origem" value="—" />}
                   {d.pickupCost ? <Field label="Pickup" value={`${d.pickupCost.toFixed(2)} ${d.currency}`} /> : <Field label="Pickup" value="—" />}
-                  <Field label="Transit Time" value={d.transitTime ? `${d.transitTime} dias` : '—'} />
+                  <Field label="Transit Time" value={
+                    d.transitTime
+                      ? d.transitTimeMax && d.transitTimeMax !== d.transitTime
+                        ? `${d.transitTime}–${d.transitTimeMax} dias`
+                        : `${d.transitTime} dias`
+                      : '—'
+                  } />
                   <Field label="ETD" value={d.etd ? formatDate(d.etd) : '—'} />
                 </div>
 
@@ -135,8 +142,11 @@ export function RankingDisplay({ quotations, onGenerateReport, loading = false }
                       }
                       const ttList = quotations.filter(q => q.extractedData.transitTime != null);
                       if (ttList.length > 1 && d.transitTime != null) {
-                        if (d.transitTime === Math.min(...ttList.map(q => q.extractedData.transitTime!))) parts.push(`transit time mais rápido (${d.transitTime}d)`);
-                        else parts.push(`transit time de ${d.transitTime} dias`);
+                        const ttStr = d.transitTimeMax && d.transitTimeMax !== d.transitTime
+                          ? `${d.transitTime}–${d.transitTimeMax}d`
+                          : `${d.transitTime}d`;
+                        if (d.transitTime === Math.min(...ttList.map(q => q.extractedData.transitTime!))) parts.push(`transit time mais rápido (${ttStr})`);
+                        else parts.push(`transit time de ${ttStr}`);
                       }
                       return (parts.join('; ') || `custo total: ${total.toFixed(2)} ${d.currency}`) + `. Modal: ${d.modal}${d.incoterm ? ' · ' + d.incoterm : ''}.`;
                     })()}
@@ -149,14 +159,25 @@ export function RankingDisplay({ quotations, onGenerateReport, loading = false }
       )}
 
       {sorted.length > 0 && (
-        <button
-          onClick={() => onGenerateReport(sorted)}
-          disabled={loading}
-          className="w-full px-6 py-3 bg-[#003d4d] hover:bg-[#004d60] disabled:opacity-50 text-white rounded-xl transition flex items-center justify-center gap-2 font-semibold"
-        >
-          <Download className="w-4 h-4" />
-          {loading ? 'Gerando...' : 'Gerar Relatório PDF'}
-        </button>
+        <div className="flex gap-3">
+          {onAddMore && (
+            <button
+              onClick={onAddMore}
+              className="flex-1 px-6 py-3 border-2 border-[#4A9BAA] text-[#4A9BAA] hover:bg-[#f0f9fb] rounded-xl transition flex items-center justify-center gap-2 font-semibold"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar Cotação
+            </button>
+          )}
+          <button
+            onClick={() => onGenerateReport(sorted)}
+            disabled={loading}
+            className="flex-1 px-6 py-3 bg-[#003d4d] hover:bg-[#004d60] disabled:opacity-50 text-white rounded-xl transition flex items-center justify-center gap-2 font-semibold"
+          >
+            <Download className="w-4 h-4" />
+            {loading ? 'Gerando...' : 'Gerar Relatório PDF'}
+          </button>
+        </div>
       )}
     </div>
   );

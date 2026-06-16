@@ -76,6 +76,8 @@ export default function UploadPage() {
   const [quotations, setQuotations] = useState<ExtractionData[]>([]);
   const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
   const [allQuotations, setAllQuotations] = useState<Quotation[]>([]);
+  const [isAddingMore, setIsAddingMore] = useState(false);
+  const [reportFileName, setReportFileName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [extractingRequest, setExtractingRequest] = useState(false);
@@ -131,35 +133,55 @@ export default function UploadPage() {
     setStep('review-quotes');
   };
 
+  // ─── Adicionar mais cotações ao ranking existente ──────────────────────────
+  const handleAddMore = () => {
+    setQuotations([]);
+    setQuoteFiles([]);
+    setError('');
+    setIsAddingMore(true);
+    setStep('quotes');
+  };
+
   // ─── Step 4: Confirmar e calcular ranking ──────────────────────────────────
   const handleConfirm = async () => {
     if (quotations.length === 0 || !user) return;
     setLoading(true);
     try {
-      const scores = calculateScoring(quotations);
+      // Se estiver adicionando mais, combinar com as cotações já confirmadas
+      const prevExtracted = isAddingMore ? allQuotations.map(q => q.extractedData) : [];
+      const prevFiles = isAddingMore ? allQuotations.map(q => ({ name: q.originalFileName })) : [];
+
+      const allExtracted = [...prevExtracted, ...quotations];
+      const allFiles = [...prevFiles, ...quoteFiles];
+
+      const scores = calculateScoring(allExtracted);
       const ranking = getRanking(scores);
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 15);
 
-      // ranking é array de índices ordenados do melhor para o pior
       const positionOf = (idx: number) => ranking.indexOf(idx) + 1;
 
-      const updated: Quotation[] = quotations.map((q, idx) => ({
-        id: crypto.randomUUID?.() || `tmp-${Date.now()}-${idx}`,
-        userId: user.uid,
-        createdAt: new Date(),
-        expiresAt,
-        originalFileName: quoteFiles[idx]?.name || '',
-        pdfUrl: '',
-        extractedData: q,
-        score: getScoreByIndex(idx, scores),
-        ranking: positionOf(idx),
-        status: 'RANKED',
-      }));
+      const updated: Quotation[] = allExtracted.map((q, idx) => {
+        const existing = isAddingMore && idx < prevExtracted.length ? allQuotations[idx] : null;
+        return {
+          id: existing?.id ?? (crypto.randomUUID?.() ?? `tmp-${Date.now()}-${idx}`),
+          userId: user.uid,
+          createdAt: existing?.createdAt ?? new Date(),
+          expiresAt: existing?.expiresAt ?? expiresAt,
+          originalFileName: allFiles[idx]?.name ?? '',
+          pdfUrl: existing?.pdfUrl ?? '',
+          extractedData: q,
+          score: getScoreByIndex(idx, scores),
+          ranking: positionOf(idx),
+          status: 'RANKED' as const,
+        };
+      });
 
       setAllQuotations(updated);
 
-      await Promise.all(updated.map(q => addDoc(collection(db, 'quotations'), {
+      // Salvar apenas as novas cotações no Firestore
+      const newOnes = updated.slice(prevExtracted.length);
+      await Promise.all(newOnes.map(q => addDoc(collection(db, 'quotations'), {
         userId: q.userId,
         createdAt: serverTimestamp(),
         expiresAt: q.expiresAt,
@@ -170,6 +192,7 @@ export default function UploadPage() {
         status: q.status,
       })));
 
+      setIsAddingMore(false);
       setStep('ranking');
     } catch (e: any) {
       setError(e.message || 'Erro ao salvar');
@@ -267,7 +290,7 @@ export default function UploadPage() {
                 cargo={cargo}
                 buttonLabel="Selecionar Arquivos (PDF, EML, MSG)"
               />
-              <button onClick={() => setStep('review-request')} className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600">
+              <button onClick={() => setStep(isAddingMore ? 'ranking' : 'review-request')} className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600">
                 ← Voltar
               </button>
             </div>
@@ -314,7 +337,12 @@ export default function UploadPage() {
           {step === 'ranking' && (
             <RankingDisplay
               quotations={allQuotations}
-              onGenerateReport={() => setStep('report')}
+              onGenerateReport={() => {
+                const ref = cargo?.clientRef ? `${cargo.clientRef}-` : '';
+                setReportFileName(`brasporto-cotacoes-${ref}${new Date().toISOString().split('T')[0]}`);
+                setStep('report');
+              }}
+              onAddMore={handleAddMore}
               loading={loading}
             />
           )}
@@ -325,22 +353,39 @@ export default function UploadPage() {
               <div>
                 <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-2" />
                 <h2 className="text-xl font-bold text-gray-900">Relatório Pronto</h2>
-                <p className="text-gray-500 text-sm mt-1">Baixe o comparativo completo em PDF</p>
+                <p className="text-gray-500 text-sm mt-1">Defina o nome do arquivo e baixe o comparativo em PDF</p>
               </div>
-              <div className="flex gap-4 max-w-md mx-auto">
-                <PDFDownloadLink
-                  document={<ReportPDF quotations={allQuotations} cargo={cargo ?? undefined} />}
-                  fileName={`brasporto-cotacoes-${new Date().toISOString().split('T')[0]}.pdf`}
-                  className="flex-1 px-6 py-3 bg-[#4A9BAA] hover:bg-[#3d8594] text-white rounded-xl transition font-medium text-sm flex items-center justify-center"
-                >
-                  {({ loading: l }) => l ? 'Gerando PDF...' : '⬇ Baixar Relatório PDF'}
-                </PDFDownloadLink>
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="flex-1 px-6 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition font-medium text-sm"
-                >
-                  Dashboard
-                </button>
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="text-left">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Nome do arquivo
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={reportFileName}
+                      onChange={e => setReportFileName(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4A9BAA]"
+                      placeholder="brasporto-cotacoes"
+                    />
+                    <span className="text-sm text-gray-400 flex-shrink-0">.pdf</span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <PDFDownloadLink
+                    document={<ReportPDF quotations={allQuotations} cargo={cargo ?? undefined} />}
+                    fileName={`${reportFileName || 'brasporto-cotacoes'}.pdf`}
+                    className="flex-1 px-6 py-3 bg-[#4A9BAA] hover:bg-[#3d8594] text-white rounded-xl transition font-medium text-sm flex items-center justify-center"
+                  >
+                    {({ loading: l }) => l ? 'Gerando PDF...' : '⬇ Baixar Relatório PDF'}
+                  </PDFDownloadLink>
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="flex-1 px-6 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition font-medium text-sm"
+                  >
+                    Dashboard
+                  </button>
+                </div>
               </div>
             </div>
           )}
