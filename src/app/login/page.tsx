@@ -103,7 +103,7 @@ export default function LoginPage() {
               © {new Date().getFullYear()} Brasporto International Logistics
             </p>
             <span className="px-2.5 py-1 bg-[#4A9BAA] text-white text-xs font-bold font-mono rounded-full tracking-widest shadow">
-              v26.06.03
+              v26.06.16
             </span>
           </div>
         </div>
@@ -246,7 +246,7 @@ export default function LoginPage() {
 
           <div className="mt-4 flex justify-center">
             <span className="px-3 py-1 bg-[#4A9BAA] text-white text-xs font-bold font-mono rounded-full tracking-widest shadow-sm">
-              v26.06.03
+              v26.06.16
             </span>
           </div>
         </div>
