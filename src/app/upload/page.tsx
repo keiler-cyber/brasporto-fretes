@@ -147,15 +147,6 @@ export default function UploadPage() {
     setStep('review-quotes');
   };
 
-  // ─── Adicionar mais cotações ao ranking existente ─────────────────────────
-  const handleAddMore = () => {
-    setQuotations([]);
-    setQuoteFiles([]);
-    setError('');
-    setIsAddingMore(true);
-    setStep('quotes');
-  };
-
   // ─── Step 4: Confirmar e calcular ranking ─────────────────────────────────
   const handleConfirm = async () => {
     if (quotations.length === 0 || !user) return;
@@ -217,6 +208,7 @@ export default function UploadPage() {
   };
 
   const effectiveSessionRef = sessionRef.trim() || allQuotations[0]?.sessionRef || '';
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -373,14 +365,13 @@ export default function UploadPage() {
             <RankingDisplay
               quotations={allQuotations}
               onGenerateReport={() => {
-                const ref = effectiveSessionRef || cargo?.clientRef || '';
+                const ref = sessionRef.trim() || allQuotations[0]?.sessionRef || '';
                 setReportFileName(ref
-                  ? `${ref.replace(/[/\\:*?"<>|]/g, '-')}`
+                  ? ref.replace(/[/\\:*?"<>|]/g, '-')
                   : `brasporto-cotacoes-${new Date().toISOString().split('T')[0]}`
                 );
                 setStep('report');
               }}
-              onAddMore={handleAddMore}
               loading={loading}
             />
           )}
