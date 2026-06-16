@@ -244,11 +244,6 @@ export default function LoginPage() {
             <p className="text-xs">Acesso restrito a colaboradores</p>
           </div>
 
-          <div className="mt-4 flex justify-center">
-            <span className="px-3 py-1 bg-[#4A9BAA] text-white text-xs font-bold font-mono rounded-full tracking-widest shadow-sm">
-              v26.06.16
-            </span>
-          </div>
         </div>
       </div>
 
