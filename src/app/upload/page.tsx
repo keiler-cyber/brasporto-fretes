@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -69,7 +69,6 @@ function convertFileToBase64(file: File): Promise<string> {
 
 export default function UploadPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
   const [step, setStep] = useState<Step>('request');
@@ -86,7 +85,8 @@ export default function UploadPage() {
 
   // ─── Modo "continuar análise" vindo do histórico ──────────────────────────
   useEffect(() => {
-    if (searchParams?.get('continue') !== 'true') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('continue') !== 'true') return;
     try {
       const raw = localStorage.getItem('bp_continue_session');
       if (!raw) return;
@@ -100,7 +100,7 @@ export default function UploadPage() {
       setIsAddingMore(true);
       setStep('quotes');
     } catch {}
-  }, [searchParams]);
+  }, []);
 
   if (authLoading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
