@@ -100,13 +100,15 @@ export default function Home() {
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div>
-            <p className="text-3xl font-black tracking-widest text-white leading-none">BRASPORTO</p>
-            <p className="text-xs tracking-[0.25em] text-white/70 uppercase mt-1 font-medium">International Logistics</p>
+            <img src="/brasporto-logo.png" alt="Brasporto International Logistics"
+              className="h-12 w-auto object-contain"
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
           </div>
 
           <div>
             <div className="w-10 h-1 bg-[#e8a020] mb-6 rounded" />
-            <h1 className="text-5xl font-black text-white leading-tight mb-4">
+            <h1 className="text-5xl font-semibold text-white leading-tight mb-4">
               Comparador<br />inteligente<br />de fretes
             </h1>
             <p className="text-[#7dd3e8] text-lg leading-relaxed max-w-sm">
@@ -115,10 +117,10 @@ export default function Home() {
           </div>
 
           <div className="flex items-center justify-between">
-            <p className="text-white/40 text-xs">
-              © {new Date().getFullYear()} Brasporto International Logistics
-            </p>
-            <span className="px-2.5 py-1 bg-[#4A9BAA] text-white text-xs font-bold font-mono rounded-full tracking-widest shadow">
+            <img src="/oea.png" alt="OEA Segurança"
+              className="h-14 w-auto object-contain opacity-90"
+            />
+            <span className="px-2.5 py-1 bg-[#4A9BAA] text-white text-xs font-mono rounded-full tracking-widest shadow">
               v26.06.18
             </span>
           </div>
@@ -131,8 +133,7 @@ export default function Home() {
 
           {/* Logo mobile */}
           <div className="lg:hidden flex flex-col items-center mb-8">
-            <p className="text-2xl font-black tracking-widest text-[#003d4d]">BRASPORTO</p>
-            <p className="text-[10px] tracking-[0.2em] text-gray-400 uppercase">International Logistics</p>
+            <img src="/brasporto-logo.png" alt="Brasporto" className="h-10 w-auto object-contain" />
           </div>
 
           {/* Heading */}
