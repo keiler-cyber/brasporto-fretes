@@ -101,8 +101,8 @@ export default function Home() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div>
             <img src="/brasporto-logo.png" alt="Brasporto International Logistics"
-              className="h-16 w-auto object-contain"
-              style={{ filter: 'brightness(0) invert(1)' }}
+              className="h-24 w-auto object-contain"
+              style={{ filter: 'brightness(0) invert(1)', maxWidth: '260px' }}
             />
           </div>
 
