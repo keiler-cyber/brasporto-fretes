@@ -67,7 +67,7 @@ export default function QuotationDetailPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login');
+    if (!authLoading && !user) router.push('/');
   }, [user, authLoading, router]);
 
   useEffect(() => {

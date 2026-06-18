@@ -17,7 +17,7 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    router.push('/');
   };
 
   const initials = user?.email?.charAt(0).toUpperCase() ?? 'U';

@@ -107,7 +107,7 @@ export default function UploadPage() {
       <Loader2 className="w-8 h-8 text-[#4A9BAA] animate-spin" />
     </div>
   );
-  if (!user) { router.push('/login'); return null; }
+  if (!user) { router.push('/'); return null; }
 
   // ─── Step 1: Upload do pedido ─────────────────────────────────────────────
   const handleRequestUpload = async (files: File[]) => {

@@ -13,13 +13,13 @@ import { Upload, Clock, Loader2, Eye, Trophy, Award, Star, LogOut } from 'lucide
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [view, setView] = useState<'home' | 'historico'>('home');
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login');
+    if (!authLoading && !user) router.push('/');
   }, [user, authLoading, router]);
 
   // Limpar expiradas
@@ -172,8 +172,11 @@ export default function Dashboard() {
         </div>
 
         <div className="flex justify-end mb-4">
-          <button onClick={() => router.push('/login')} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition">
-            <LogOut className="w-3.5 h-3.5" /> Voltar ao login
+          <button
+            onClick={async () => { await logout(); router.push('/'); }}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Sair
           </button>
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-3">Bem-vindo ao Brasporto Fretes</h1>
