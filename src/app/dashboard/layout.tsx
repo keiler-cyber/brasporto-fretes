@@ -36,8 +36,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <img
               src="/brasporto-logo.png"
               alt="Brasporto"
-              className="h-11 w-auto object-contain flex-shrink-0"
-              style={{ filter: 'brightness(0) invert(1)', maxWidth: '180px' }}
+              className="h-16 w-auto object-contain flex-shrink-0"
+              style={{ filter: 'brightness(0) invert(1)', maxWidth: '240px' }}
             />
 
             <div className="w-px h-8 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.2)' }} />
