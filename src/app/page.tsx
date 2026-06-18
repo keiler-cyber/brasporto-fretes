@@ -101,8 +101,8 @@ export default function Home() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div>
             <img src="/brasporto-logo.png" alt="Brasporto International Logistics"
-              className="h-24 w-auto object-contain"
-              style={{ filter: 'brightness(0) invert(1)', maxWidth: '260px' }}
+              className="h-32 w-auto object-contain"
+              style={{ filter: 'brightness(0) invert(1)', maxWidth: '320px' }}
             />
           </div>
 
@@ -118,7 +118,7 @@ export default function Home() {
 
           <div className="flex items-center justify-between">
             <img src="/oea.png" alt="OEA Segurança"
-              className="h-14 w-auto object-contain opacity-90"
+              className="h-28 w-auto object-contain opacity-90"
             />
             <span className="px-2.5 py-1 bg-[#4A9BAA] text-white text-xs font-mono rounded-full tracking-widest shadow">
               v26.06.18
