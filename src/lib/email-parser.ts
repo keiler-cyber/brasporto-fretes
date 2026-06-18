@@ -61,12 +61,15 @@ export async function parseMSG(buffer: Buffer): Promise<ParsedEmail> {
       }
     }
 
+    const htmlBody: string | undefined = (msg as any).bodyHtml || undefined;
+    const plainText: string = msg.body || (htmlBody ? htmlBody.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim() : '');
+
     return {
       from: msg.senderName || msg.senderEmail,
       to: msg.recipients?.[0]?.name || msg.recipients?.[0]?.email,
       subject: msg.subject,
-      text: msg.body,
-      html: undefined,
+      text: plainText,
+      html: htmlBody,
       attachments,
     };
   } catch (error) {

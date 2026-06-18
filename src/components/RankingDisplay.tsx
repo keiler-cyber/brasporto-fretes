@@ -97,7 +97,12 @@ export function RankingDisplay({ quotations, onGenerateReport, onAddMore, loadin
                         }`}>#{pos}</span>
                         {isBest && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">MELHOR OPÇÃO</span>}
                       </div>
-                      <h3 className="font-bold text-gray-900">{d.agentName}</h3>
+                      <h3 className="font-bold text-gray-900">
+                        {d.agentName}
+                        {d.destinationAirport && (
+                          <span className="ml-1.5 text-xs font-normal text-gray-500">→ {d.destinationAirport}</span>
+                        )}
+                      </h3>
                       {d.carrier && <p className="text-xs text-[#4A9BAA] font-medium">{d.carrier}</p>}
                     </div>
                   </div>

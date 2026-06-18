@@ -54,6 +54,7 @@ export interface ExtractionData {
   freeTime?: number;
   weight?: number;
   measurement?: number;
+  destinationAirport?: string; // aeroporto/porto destino quando há múltiplas opções (ex: "GRU", "VCP")
   rawData: string; // Dados brutos do PDF
 }
 

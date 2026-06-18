@@ -54,10 +54,22 @@ PASSO 5 — Pickup: usar valor do aeroporto POL de cada opção
 Se email/PDF tem tabela com várias rotas/companhias → retornar ARRAY.
 Uma opção → retornar objeto simples.
 
+═══ AEROPORTOS DE DESTINO ALTERNATIVOS ═══
+Se a cotação oferecer a mesma rota com MÚLTIPLOS aeroportos de destino como opções distintas
+(ex: GRU e VCP separados, ou GRU e CGH como alternativas), criar um item separado para
+CADA aeroporto de destino, com os valores correspondentes (pickup, transit time, carrier).
+Preencher o campo "destinationAirport" com o código IATA do aeroporto desta opção.
+
+═══ PESO TAXADO INFORMADO PELO AGENTE ═══
+Se a cotação informar explicitamente um "chargeable weight" ou "taxable weight" ou "peso taxado"
+para a opção (número declarado pelo agente), usar ESSE valor diretamente em effectiveWeight —
+não recalcular a partir das dimensões neste caso.
+
 FORMATO (cada objeto):
 {
   "agentName": "Nome da EMPRESA agente apenas (ex: 'UNI Logistics', 'CHL Freight', 'CNS') — REMOVER TOTALMENTE caracteres antes do nome como '.:', '->', '**', '●', '○', '■' ou números",
   "carrier": "Companhia aérea ou armador marítimo (ex: 'Emirates (EK)', 'Ethiopian (ET)', 'MSC', 'Maersk')",
+  "destinationAirport": "código IATA do aeroporto/porto de destino desta opção quando há múltiplos (ex: 'GRU', 'VCP', 'CGH', 'SIN') — null se só há um destino",
   "frequency": "Frequência de saídas (apenas AÉREO): 'DAILY', '3x per week', 'MON WED FRI SAT', 'Weekly' — null se FCL/LCL ou não informado",
   "localChargesBRL": número (soma de TODAS as taxas cobradas no Brasil em BRL: THC destino, handling, entrega, desembaraço, REDEX, etc.) ou null,
   "localChargesBRLDesc": "descrição resumida das taxas em BRL (ex: 'THC + Handling + Entrega')" ou null,
@@ -127,6 +139,7 @@ function parseJSON(text: string): any {
 export async function POST(request: NextRequest) {
   try {
     const { fileBase64, fileName, fileType, cargo } = await request.json();
+    const cargoBilledWeight: number | undefined = cargo?.billedWeight || undefined;
 
     if (!fileBase64 || !fileType) {
       return NextResponse.json({ error: 'Arquivo e tipo são obrigatórios' }, { status: 400 });
@@ -153,6 +166,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const fixBaseCost = (item: any): any => {
+      if (!item || typeof item !== 'object') return item;
+      if (item.agentName?.toLowerCase().includes('brasporto')) item.agentName = '';
+      if (item.ratePerKg && (!item.baseCost || item.baseCost === 0)) {
+        let eff = item.effectiveWeight || 0;
+        if (!eff && cargoBilledWeight) {
+          eff = Math.max(cargoBilledWeight, item.rateMinWeight || 0);
+          item.effectiveWeight = eff;
+        }
+        if (eff > 0) item.baseCost = parseFloat((item.ratePerKg * eff).toFixed(2));
+      }
+      return item;
+    };
+
     const isUseful = (data: any) => data && data.agentName && data.agentName.trim() !== '' && data.baseCost > 0;
 
     // Se há PDFs, tentar extrair de cada um
@@ -176,7 +203,8 @@ export async function POST(request: NextRequest) {
 
       // Se algum PDF retornou dados úteis, usar esses resultados
       if (results.length > 0) {
-        return NextResponse.json(results.length === 1 ? results[0] : { multiple: true, items: results });
+        const fixed = results.map(fixBaseCost);
+        return NextResponse.json(fixed.length === 1 ? fixed[0] : { multiple: true, items: fixed });
       }
     }
 
@@ -188,11 +216,11 @@ export async function POST(request: NextRequest) {
 
     // Filtrar itens em branco
     if (extracted?.multiple && Array.isArray(extracted.items)) {
-      const useful = extracted.items.filter(isUseful);
+      const useful = extracted.items.map(fixBaseCost).filter(isUseful);
       if (useful.length === 0) return NextResponse.json({ error: 'Nenhuma cotação válida encontrada no corpo do email' }, { status: 400 });
       return NextResponse.json(useful.length === 1 ? useful[0] : { multiple: true, items: useful });
     }
-    return NextResponse.json(extracted);
+    return NextResponse.json(fixBaseCost(extracted));
   } catch (error: any) {
     console.error('Extract email error:', error);
     return NextResponse.json(

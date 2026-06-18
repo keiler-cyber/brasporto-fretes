@@ -46,10 +46,22 @@ PASSO 5 — Pickup: usar valor do aeroporto POL de cada opção
 Se PDF tem tabela com várias rotas/companhias → retornar ARRAY.
 Uma opção → retornar objeto simples.
 
+═══ AEROPORTOS DE DESTINO ALTERNATIVOS ═══
+Se a cotação oferecer a mesma rota com MÚLTIPLOS aeroportos de destino como opções distintas
+(ex: GRU e VCP separados, ou GRU e CGH como alternativas), criar um item separado para
+CADA aeroporto de destino, com os valores correspondentes (pickup, transit time, carrier).
+Preencher o campo "destinationAirport" com o código IATA do aeroporto desta opção.
+
+═══ PESO TAXADO INFORMADO PELO AGENTE ═══
+Se a cotação informar explicitamente um "chargeable weight" ou "taxable weight" ou "peso taxado"
+para a opção (número declarado pelo agente), usar ESSE valor diretamente em effectiveWeight —
+não recalcular a partir das dimensões neste caso.
+
 FORMATO (cada objeto):
 {
   "agentName": "Nome da EMPRESA agente apenas (ex: 'UNI Logistics', 'CHL Freight', 'CNS') — REMOVER TOTALMENTE caracteres antes do nome como '.:', '->', '**', '●', '○', '■' ou números",
   "carrier": "Companhia aérea ou armador marítimo (ex: 'Emirates (EK)', 'Ethiopian (ET)', 'MSC', 'Maersk')",
+  "destinationAirport": "código IATA do aeroporto/porto de destino desta opção quando há múltiplos (ex: 'GRU', 'VCP', 'CGH', 'SIN') — null se só há um destino",
   "frequency": "Frequência de saídas (apenas AÉREO): 'DAILY', '3x per week', 'MON WED FRI SAT', 'Weekly' — null se FCL/LCL ou não informado",
   "localChargesBRL": número (soma de TODAS as taxas cobradas no Brasil em BRL: THC destino, handling, entrega, desembaraço, REDEX, etc.) ou null,
   "localChargesBRLDesc": "descrição resumida das taxas em BRL (ex: 'THC + Handling + Entrega')" ou null,
@@ -118,14 +130,30 @@ function parseJSON(text: string): any {
   throw new Error('No valid JSON found');
 }
 
-function sanitize(item: any, rawData: string): any {
+function fixBaseCost(item: any, cargoBilledWeight?: number): any {
+  if (!item || typeof item !== 'object') return item;
+  // Se tem taxa/kg mas baseCost está zerado, recalcular
+  if (item.ratePerKg && (!item.baseCost || item.baseCost === 0)) {
+    let eff = item.effectiveWeight || 0;
+    if (!eff && cargoBilledWeight) {
+      eff = Math.max(cargoBilledWeight, item.rateMinWeight || 0);
+      item.effectiveWeight = eff;
+    }
+    if (eff > 0) {
+      item.baseCost = parseFloat((item.ratePerKg * eff).toFixed(2));
+    }
+  }
+  return item;
+}
+
+function sanitize(item: any, rawData: string, cargoBilledWeight?: number): any {
   if (!item || typeof item !== 'object') return null;
   // Nunca deixar Brasporto como agente
   if (item.agentName?.toLowerCase().includes('brasporto')) {
     item.agentName = '';
   }
   item.rawData = rawData;
-  return item;
+  return fixBaseCost(item, cargoBilledWeight);
 }
 
 export async function POST(request: NextRequest) {
@@ -135,6 +163,8 @@ export async function POST(request: NextRequest) {
     if (!pdfBase64) {
       return NextResponse.json({ error: 'PDF não fornecido' }, { status: 400 });
     }
+
+    const cargoBilledWeight: number | undefined = cargo?.billedWeight || undefined;
 
     // Incluir contexto da carga no prompt quando disponível
     const cargoContext = cargo?.billedWeight
@@ -181,7 +211,7 @@ export async function POST(request: NextRequest) {
     // Suporte a múltiplas opções (array) ou cotação única (objeto)
     if (Array.isArray(parsed)) {
       const items = parsed
-        .map(item => sanitize(item, content.text))
+        .map(item => sanitize(item, content.text, cargoBilledWeight))
         .filter(Boolean);
       if (items.length === 0) {
         return NextResponse.json({ error: 'Nenhuma cotação válida extraída' }, { status: 400 });
@@ -189,7 +219,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ multiple: true, items });
     }
 
-    const single = sanitize(parsed, content.text);
+    const single = sanitize(parsed, content.text, cargoBilledWeight);
     return NextResponse.json(single);
 
   } catch (error: any) {
