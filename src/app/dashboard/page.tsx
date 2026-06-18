@@ -7,13 +7,12 @@ import { collection, query, orderBy, onSnapshot, getDocs, deleteDoc } from 'fire
 import { db } from '@/lib/firebase';
 import { Quotation } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import Image from 'next/image';
 import { getTotalCost } from '@/lib/scoring';
-import { Upload, Clock, Loader2, Eye, Trophy, Award, Star, LogOut } from 'lucide-react';
+import { Upload, Clock, Loader2, Eye, Trophy, Award, Star } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [view, setView] = useState<'home' | 'historico'>('home');
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,10 +72,10 @@ export default function Dashboard() {
   // ── HISTÓRICO ──────────────────────────────────────────────────────────────
   if (view === 'historico') {
     return (
-      <div className="p-8">
+      <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Histórico de Cotações</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Histórico de Cotações</h1>
             <p className="text-sm text-gray-500 mt-0.5">{quotations.length} cotações registradas</p>
           </div>
           <div className="flex gap-3">
@@ -126,7 +125,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-5 py-3">
                         {q.sessionRef
-                          ? <span className="font-mono text-xs text-[#4A9BAA] font-bold">{q.sessionRef}</span>
+                          ? <span className="font-mono text-xs text-[#4A9BAA] font-semibold">{q.sessionRef}</span>
                           : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-5 py-3 text-gray-500">{formatDate(q.createdAt)}</td>
@@ -157,65 +156,59 @@ export default function Dashboard() {
 
   // ── HOME ───────────────────────────────────────────────────────────────────
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-full max-w-2xl px-6 text-center">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <Image
-            src="/brasporto-logo.png"
-            alt="Brasporto International Logistics"
-            width={280}
-            height={98}
-            className="object-contain"
-            priority
-          />
+    <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 72px)' }}>
+      <div className="w-full max-w-2xl text-center">
+
+        <div className="mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-6"
+            style={{ background: 'rgba(74,155,170,0.12)', color: '#4A9BAA' }}>
+            <span>✦</span> Plataforma de Cotação de Fretes
+          </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={async () => { await logout(); router.push('/'); }}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition"
-          >
-            <LogOut className="w-3.5 h-3.5" /> Sair
-          </button>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Bem-vindo ao Brasporto Fretes</h1>
-        <p className="text-gray-500 mb-10 leading-relaxed">
-          Inicie um novo processo de cotação de fretes de forma rápida e centralizada. Faça o<br />
-          upload dos documentos e nós cuidamos do resto.
+        <h1 className="text-3xl font-semibold text-gray-900 mb-3">
+          Bem-vindo, <span style={{ color: '#003d4d' }} className="capitalize">{user?.email?.split('@')[0]}</span>
+        </h1>
+        <p className="text-gray-500 mb-10 leading-relaxed text-sm">
+          Inicie um novo processo de cotação ou consulte o histórico de cotações realizadas.
         </p>
 
-        {/* Cards */}
         <div className="grid grid-cols-2 gap-6">
-          {/* Nova Cotação */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition">
-            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
-              <Upload className="w-8 h-8 text-blue-400" />
+          <div className="bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(74,155,170,0.1)' }}>
+              <Upload className="w-7 h-7" style={{ color: '#4A9BAA' }} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-1">Nova Cotação</h2>
-              <p className="text-sm text-gray-500">Inicie um novo pedido de cotação fazendo o upload de seus documentos de embarque.</p>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Nova Cotação</h2>
+              <p className="text-sm text-gray-500">Faça o upload dos documentos de embarque e obtenha o ranking de agentes.</p>
             </div>
             <button
               onClick={() => router.push('/upload')}
-              className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition text-sm"
+              className="w-full py-2.5 text-white rounded-xl font-medium transition text-sm"
+              style={{ background: '#4A9BAA' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#3d8594'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#4A9BAA'; }}
             >
               Começar Agora
             </button>
           </div>
 
-          {/* Histórico */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition">
-            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center">
-              <Clock className="w-8 h-8 text-gray-400" />
+          <div className="bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(0,61,77,0.07)' }}>
+              <Clock className="w-7 h-7" style={{ color: '#003d4d' }} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-1">Histórico</h2>
-              <p className="text-sm text-gray-500">Consulte o arquivo de pedidos e cotações realizadas anteriormente no sistema.</p>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Histórico</h2>
+              <p className="text-sm text-gray-500">Consulte cotações anteriores, rankings e relatórios de processos encerrados.</p>
             </div>
             <button
               onClick={() => setView('historico')}
-              className="w-full py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition text-sm"
+              className="w-full py-2.5 border rounded-xl font-medium transition text-sm"
+              style={{ borderColor: '#e5e7eb', color: '#374151' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f9fafb'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
               Acessar Histórico
             </button>
