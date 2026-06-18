@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
 
     // Incluir contexto da carga no prompt quando disponível
     const cargoContext = cargo?.billedWeight
-      ? `\nCONTEXTO DA CARGA (do pedido do cliente):\n- Peso bruto: ${cargo.weight} kg\n- Volume: ${cargo.measurement} m³\n- PESO TAXADO A USAR: ${cargo.billedWeight} kg (já calculado, use este valor)\n- Incoterm: ${cargo.incoterm || 'EXW'}\n${cargo.merchandiseValue ? `- Valor da mercadoria: ${cargo.merchandiseValue} (usar para calcular customsCharges se a cotação tiver taxa percentual de customs)\n` : ''}`
+      ? `\nCONTEXTO DA CARGA (do pedido do cliente):\n- Peso bruto: ${cargo.weight} kg\n- Volume: ${cargo.measurement} m³\n- Peso taxado da carga (referência): ${cargo.billedWeight} kg\n- Incoterm: ${cargo.incoterm || 'EXW'}\n${cargo.merchandiseValue ? `- Valor da mercadoria: ${cargo.merchandiseValue} (usar para calcular customsCharges se a cotação tiver taxa percentual de customs)\n` : ''}\nATENÇÃO: Se o agente declarar explicitamente um "chargeable weight", "peso taxado" ou "peso utilizado" DIFERENTE do peso de referência acima, usar o valor DECLARADO PELO AGENTE em effectiveWeight — ele prevalece sobre o de referência.`
       : '';
 
     const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';

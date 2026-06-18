@@ -25,7 +25,8 @@ export function getTotalCost(q: ExtractionData): number {
 export function getEffectiveCost(q: ExtractionData): number {
   const totalCost = getTotalCost(q);
   if (q.modal === 'AEREO') {
-    const billed = billedWeight(q.weight, q.measurement);
+    // Prioridade: peso declarado pelo agente → calculado da carga
+    const billed = q.effectiveWeight || billedWeight(q.weight, q.measurement);
     return billed > 0 ? totalCost / billed : totalCost;
   }
   if (q.modal === 'LCL') {
