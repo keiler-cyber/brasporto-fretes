@@ -168,11 +168,11 @@ export function PDFUpload({ onUploadComplete, onError, cargo, buttonLabel = 'Sel
         onDrop={handleDrop}
         onClick={() => !uploading && fileInputRef.current?.click()}
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-          transition-all duration-200
+          border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer
+          transition-all duration-200 select-none
           ${isDragging
-            ? 'border-blue-400 bg-blue-50'
-            : 'border-gray-300 bg-gray-50 hover:border-blue-300'
+            ? 'border-[#4A9BAA] bg-[#f0f9fb]'
+            : 'border-gray-200 bg-gray-50 hover:border-[#4A9BAA] hover:bg-[#f0f9fb]'
           }
           ${uploading ? 'opacity-60 cursor-not-allowed' : ''}
         `}
@@ -190,21 +190,28 @@ export function PDFUpload({ onUploadComplete, onError, cargo, buttonLabel = 'Sel
         <div className="flex flex-col items-center gap-2">
           {extracting ? (
             <>
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-gray-700 font-medium">Processando arquivos...</p>
-              <p className="text-sm text-gray-600">Aguarde enquanto cada arquivo é processado</p>
+              <Loader2 className="w-8 h-8 text-[#4A9BAA] animate-spin" />
+              <p className="text-gray-700 font-medium text-sm">Processando arquivos...</p>
+              <p className="text-xs text-gray-400">Aguarde enquanto cada arquivo é processado</p>
             </>
           ) : selectedCount > 0 ? (
             <>
-              <CheckCircle className="w-8 h-8 text-green-600" />
-              <p className="text-gray-700 font-medium">{selectedCount} arquivo(s) selecionado(s)</p>
-              <p className="text-sm text-gray-600">Clique novamente para reenviar ou aguarde a extração</p>
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <p className="text-gray-700 font-medium text-sm">{selectedCount} arquivo(s) selecionado(s)</p>
+              <p className="text-xs text-gray-400">Clique novamente para reenviar ou aguarde a extração</p>
             </>
           ) : (
             <>
-              <Upload className="w-8 h-8 text-gray-400" />
-              <p className="text-gray-700 font-medium">Arraste arquivos ou clique para selecionar</p>
-              <p className="text-sm text-gray-600">Suporta: PDF, EML e MSG (Outlook)</p>
+              <div className="w-10 h-10 rounded-full bg-[#4A9BAA]/10 flex items-center justify-center">
+                <Upload className="w-5 h-5 text-[#4A9BAA]" />
+              </div>
+              <p className="text-gray-700 font-medium text-sm">Arraste arquivos ou clique para selecionar</p>
+              <p className="text-xs text-gray-400">PDF, EML e MSG (Outlook)</p>
+              <span className="mt-1 px-3 py-1 bg-[#4A9BAA] text-white rounded-lg text-[10px] font-medium">
+                {buttonLabel}
+              </span>
             </>
           )}
         </div>
