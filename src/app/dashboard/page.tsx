@@ -174,7 +174,7 @@ export default function Dashboard() {
         </p>
 
         <div className="grid grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+          <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center gap-4 transition-all hover:border-[#4A9BAA] hover:bg-[#f0f9fb]">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{ background: 'rgba(74,155,170,0.1)' }}>
               <Upload className="w-7 h-7" style={{ color: '#4A9BAA' }} />
@@ -194,10 +194,10 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+          <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center gap-4 transition-all hover:border-[#4A9BAA] hover:bg-[#f0f9fb]">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: 'rgba(0,61,77,0.07)' }}>
-              <Clock className="w-7 h-7" style={{ color: '#003d4d' }} />
+              style={{ background: 'rgba(74,155,170,0.08)' }}>
+              <Clock className="w-7 h-7" style={{ color: '#4A9BAA' }} />
             </div>
             <div>
               <h2 className="text-base font-semibold text-gray-900 mb-1">Histórico</h2>
@@ -205,10 +205,10 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => setView('historico')}
-              className="w-full py-2.5 border rounded-xl font-medium transition text-sm"
-              style={{ borderColor: '#e5e7eb', color: '#374151' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f9fafb'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              className="w-full py-2.5 text-white rounded-xl font-medium transition text-sm"
+              style={{ background: '#4A9BAA' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#3d8594'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#4A9BAA'; }}
             >
               Acessar Histórico
             </button>
