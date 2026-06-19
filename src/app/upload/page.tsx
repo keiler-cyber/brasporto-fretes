@@ -437,26 +437,26 @@ function RequestDropzone({ loading, onFile }: { loading: boolean; onFile: (f: Fi
           const f = Array.from(e.dataTransfer.files).filter(f => ['.pdf','.eml','.msg'].includes(f.name.toLowerCase().slice(f.name.lastIndexOf('.'))));
           if (f.length) onFile(f);
         }}
-        className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${drag ? 'border-[#4A9BAA] bg-[#f0f9fb]' : 'border-gray-200 bg-gray-50 hover:border-[#4A9BAA]'} ${loading ? 'opacity-60 pointer-events-none' : ''}`}
+        className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all select-none ${drag ? 'border-[#4A9BAA] bg-[#f0f9fb]' : 'border-gray-200 bg-gray-50 hover:border-[#4A9BAA] hover:bg-[#f0f9fb]'} ${loading ? 'opacity-60 pointer-events-none' : ''}`}
         onClick={() => document.getElementById('request-file-input')?.click()}
       >
         <input id="request-file-input" type="file" accept=".pdf,.eml,.msg" className="hidden"
           onChange={e => { const f = Array.from(e.target.files || []); if (f.length) onFile(f); }} />
         {loading ? (
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-10 h-10 text-[#4A9BAA] animate-spin" />
-            <p className="text-gray-600 font-medium">Extraindo dados do pedido...</p>
+            <Loader2 className="w-8 h-8 text-[#4A9BAA] animate-spin" />
+            <p className="text-gray-700 font-medium text-sm">Extraindo dados do pedido...</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 rounded-full bg-[#4A9BAA]/10 flex items-center justify-center">
-              <FileText className="w-8 h-8 text-[#4A9BAA]" />
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-[#4A9BAA]/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-[#4A9BAA]" />
             </div>
-            <p className="text-gray-700 font-medium">Upload do Pedido (Load Request)</p>
-            <p className="text-sm text-gray-400">Arraste e solte aqui — PDF, email EML ou MSG do Outlook.</p>
-            <button className="mt-2 px-6 py-2.5 bg-[#4A9BAA] text-white rounded-lg text-sm font-medium hover:bg-[#3d8594] transition">
+            <p className="text-gray-700 font-medium text-sm">Upload do Pedido (Load Request)</p>
+            <p className="text-xs text-gray-400">PDF, email EML ou MSG do Outlook</p>
+            <span className="mt-1 px-3 py-1 bg-[#4A9BAA] text-white rounded-lg text-[10px] font-medium">
               Selecionar Arquivo (PDF, EML, MSG)
-            </button>
+            </span>
           </div>
         )}
       </div>
