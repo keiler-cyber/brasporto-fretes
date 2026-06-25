@@ -366,9 +366,14 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                       {d.currency} {total.toFixed(2)}
                     </Text>
                     {d.exchangeRateToEur && d.currency !== 'EUR' && (
-                      <Text style={{ fontSize: 5.5, color: '#1d4ed8', fontWeight: 'bold', textAlign: 'center', marginTop: 1 }}>
-                        {'≈ EUR '}{(total * d.exchangeRateToEur).toFixed(2)}
-                      </Text>
+                      <>
+                        <Text style={{ fontSize: 5.5, color: '#1d4ed8', fontWeight: 'bold', textAlign: 'center', marginTop: 1 }}>
+                          {'≈ EUR '}{(total * d.exchangeRateToEur).toFixed(2)}
+                        </Text>
+                        <Text style={{ fontSize: 4.5, color: GRAY, textAlign: 'center', marginTop: 0.5 }}>
+                          {'1 '}{d.currency}{' = '}{d.exchangeRateToEur.toFixed(5)}{' EUR · BCB PTAX'}
+                        </Text>
+                      </>
                     )}
                     {d.localChargesBRL && (
                       <Text style={{ fontSize: 5.5, color: '#16a34a', fontWeight: 'bold', marginTop: 1.5 }}>
