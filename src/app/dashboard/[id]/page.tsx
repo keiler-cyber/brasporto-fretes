@@ -83,16 +83,21 @@ export default function QuotationDetailPage() {
         const main = { id: snap.id, ...snap.data() } as Quotation;
         setQuotation(main);
 
-        // 2. Buscar todas as cotações e filtrar as do mesmo lote (±10 min)
+        // 2. Agrupar as cotações da mesma solicitação.
+        //    Preferir o sessionRef; sem ele, cair no lote por janela de ±10 min.
         const allSnap = await getDocs(query(collection(db, 'quotations'), orderBy('createdAt', 'asc')));
         const mainMs = toMs(snap.data().createdAt);
+        const mainRef = (main.sessionRef ?? '').trim();
         const WINDOW_MS = 10 * 60 * 1000; // 10 minutos
 
         const session: Quotation[] = [];
         allSnap.forEach(d => {
-          const ms = toMs(d.data().createdAt);
-          if (Math.abs(ms - mainMs) <= WINDOW_MS) {
-            session.push({ id: d.id, ...d.data() } as Quotation);
+          const data = d.data();
+          const ref = (data.sessionRef ?? '').trim();
+          const sameRef = mainRef !== '' && ref === mainRef;
+          const sameWindow = mainRef === '' && Math.abs(toMs(data.createdAt) - mainMs) <= WINDOW_MS;
+          if (sameRef || sameWindow) {
+            session.push({ id: d.id, ...data } as Quotation);
           }
         });
 

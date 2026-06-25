@@ -8,7 +8,15 @@ import { db } from '@/lib/firebase';
 import { Quotation } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { getTotalCost } from '@/lib/scoring';
-import { Upload, Clock, Loader2, Eye, Trophy, Award, Star } from 'lucide-react';
+import { Upload, Clock, Loader2, Eye, Trophy } from 'lucide-react';
+
+// Data como ms (suporta Firestore Timestamp e Date)
+function toMs(val: any): number {
+  if (!val) return 0;
+  if (typeof val?.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  return new Date(val).getTime();
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -62,12 +70,25 @@ export default function Dashboard() {
     LCL: 'bg-green-100 text-green-700',
   };
 
-  function RankIcon({ r }: { r?: number }) {
-    if (r === 1) return <Trophy className="w-4 h-4 text-yellow-500" />;
-    if (r === 2) return <Award className="w-4 h-4 text-gray-400" />;
-    if (r === 3) return <Award className="w-4 h-4 text-amber-600" />;
-    return <Star className="w-3 h-3 text-gray-300" />;
-  }
+  // Agrupa as cotações por solicitação (sessionRef). Cada grupo = 1 análise
+  // com vários agentes; o "vencedor" é o ranking #1 (fallback: menor custo).
+  const sessions = (() => {
+    const map = new Map<string, Quotation[]>();
+    for (const q of quotations) {
+      const ref = q.sessionRef?.trim();
+      const key = ref ? `ref:${ref}` : `id:${q.id}`;
+      const arr = map.get(key) ?? [];
+      arr.push(q);
+      map.set(key, arr);
+    }
+    return Array.from(map.entries())
+      .map(([key, arr]) => {
+        const winner = [...arr].sort((a, b) => (a.ranking ?? 99) - (b.ranking ?? 99))[0];
+        const latestMs = arr.reduce((m, q) => Math.max(m, toMs(q.createdAt)), 0);
+        return { key, sessionRef: winner.sessionRef?.trim() || '', createdAt: winner.createdAt, latestMs, count: arr.length, winner };
+      })
+      .sort((a, b) => b.latestMs - a.latestMs);
+  })();
 
   // ── HISTÓRICO ──────────────────────────────────────────────────────────────
   if (view === 'historico') {
@@ -76,7 +97,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Histórico de Cotações</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{quotations.length} cotações registradas</p>
+            <p className="text-sm text-gray-500 mt-0.5">{sessions.length} cotaç{sessions.length === 1 ? 'ão' : 'ões'} registrada{sessions.length === 1 ? '' : 's'}</p>
           </div>
           <div className="flex gap-3">
             <button onClick={() => setView('home')} className="text-sm text-gray-500 hover:text-gray-700">
@@ -103,44 +124,47 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Pos.</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Agentes</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nº Cotação</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Data</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Agente</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Melhor Opção</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Modal</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Custo Total</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Menor Custo</th>
                   <th className="px-5 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {quotations.map(q => {
-                  const total = getTotalCost(q.extractedData);
+                {sessions.map(s => {
+                  const w = s.winner;
+                  const total = getTotalCost(w.extractedData);
                   return (
-                    <tr key={q.id} className={`border-b border-gray-50 hover:bg-gray-50/50 transition ${q.ranking === 1 ? 'bg-yellow-50/30' : ''}`}>
+                    <tr key={s.key} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
                       <td className="px-5 py-3">
+                        <span className="text-xs text-gray-500">{s.count} agente{s.count === 1 ? '' : 's'}</span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {s.sessionRef
+                          ? <span className="font-mono text-xs text-[#4A9BAA] font-semibold">{s.sessionRef}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3 text-gray-500">{formatDate(s.createdAt)}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900">
                         <div className="flex items-center gap-1.5">
-                          <RankIcon r={q.ranking} />
-                          <span className="text-xs text-gray-500">#{q.ranking ?? '—'}</span>
+                          <Trophy className="w-4 h-4 text-yellow-500" />
+                          {w.extractedData.agentName}
                         </div>
                       </td>
                       <td className="px-5 py-3">
-                        {q.sessionRef
-                          ? <span className="font-mono text-xs text-[#4A9BAA] font-semibold">{q.sessionRef}</span>
-                          : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-5 py-3 text-gray-500">{formatDate(q.createdAt)}</td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{q.extractedData.agentName}</td>
-                      <td className="px-5 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${modalColors[q.extractedData.modal] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {q.extractedData.modal}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${modalColors[w.extractedData.modal] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {w.extractedData.modal}
                         </span>
                       </td>
                       <td className="px-5 py-3 font-medium text-gray-900">
-                        {total.toFixed(2)} <span className="text-xs text-gray-400">{q.extractedData.currency}</span>
+                        {total.toFixed(2)} <span className="text-xs text-gray-400">{w.extractedData.currency}</span>
                       </td>
                       <td className="px-5 py-3">
-                        <button onClick={() => router.push(`/dashboard/${q.id}`)} className="text-[#4A9BAA] hover:text-[#3d8594] flex items-center gap-1 text-xs font-medium">
-                          <Eye className="w-3.5 h-3.5" /> Ver
+                        <button onClick={() => router.push(`/dashboard/${w.id}`)} className="text-[#4A9BAA] hover:text-[#3d8594] flex items-center gap-1 text-xs font-medium">
+                          <Eye className="w-3.5 h-3.5" /> Ver ranking
                         </button>
                       </td>
                     </tr>
