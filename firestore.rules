@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cotações de frete — visíveis e editáveis por qualquer colaborador
+    // autenticado com e-mail @brasporto.com.
+    // O dashboard lista/limpa cotações de todos os usuários, por isso a
+    // regra libera a coleção inteira (e não apenas os docs do próprio uid).
+    match /quotations/{id} {
+      allow read, write: if isBrasporto();
+    }
+
+    function isBrasporto() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.matches('^[^@]+@brasporto[.]com$');
+    }
+  }
+}
