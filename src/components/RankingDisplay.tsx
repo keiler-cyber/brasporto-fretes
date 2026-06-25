@@ -55,7 +55,14 @@ export function RankingDisplay({ quotations, onGenerateReport, onAddMore, loadin
           <div className="text-right">
             <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Melhor opção</p>
             <p className="font-bold text-gray-900">{best.extractedData.agentName}</p>
-            <p className="text-sm text-[#4A9BAA] font-semibold">{getTotalCost(best.extractedData).toFixed(2)} {best.extractedData.currency}</p>
+            <p className="text-sm text-[#4A9BAA] font-semibold">
+              {getTotalCost(best.extractedData).toFixed(2)} {best.extractedData.currency}
+            </p>
+            {best.extractedData.exchangeRateToEur && best.extractedData.currency !== 'EUR' && (
+              <p className="text-xs text-blue-500 font-medium">
+                ≈ {(getTotalCost(best.extractedData) * best.extractedData.exchangeRateToEur).toFixed(2)} EUR
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -109,6 +116,11 @@ export function RankingDisplay({ quotations, onGenerateReport, onAddMore, loadin
                   <div className="text-right">
                     <p className="text-xl font-black text-gray-900">{total.toFixed(2)}</p>
                     <p className="text-xs text-gray-500">{d.currency} · custo total</p>
+                    {d.exchangeRateToEur && d.currency !== 'EUR' && (
+                      <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                        ≈ {(total * d.exchangeRateToEur).toFixed(2)} EUR
+                      </p>
+                    )}
                     {d.localChargesBRL && (
                       <p className="text-xs font-semibold text-green-700 mt-0.5">
                         + R$ {d.localChargesBRL.toFixed(2)} no Brasil
@@ -139,11 +151,24 @@ export function RankingDisplay({ quotations, onGenerateReport, onAddMore, loadin
                   <span className="text-gray-600">
                     {(() => {
                       const parts: string[] = [];
-                      const same = quotations.filter(q => q.extractedData.currency === d.currency);
-                      if (same.length > 1) {
-                        const costs = same.map(q => getTotalCost(q.extractedData));
-                        if (total === Math.min(...costs)) parts.push(`menor custo total em ${d.currency}`);
-                        else { const pct = ((total - Math.min(...costs)) / Math.min(...costs) * 100).toFixed(0); parts.push(`custo ${pct}% acima do menor valor`); }
+                      const isEurBase = (q: Quotation) => q.extractedData.currency === 'EUR' || (!!q.extractedData.exchangeRateToEur && q.extractedData.exchangeRateToEur > 0);
+                      const thisIsEurBase = isEurBase(quote);
+                      const group = thisIsEurBase
+                        ? quotations.filter(isEurBase)
+                        : quotations.filter(q => q.extractedData.currency === d.currency);
+                      const getComparableCost = (q: Quotation) => {
+                        const qd = q.extractedData;
+                        return (thisIsEurBase && qd.currency !== 'EUR' && qd.exchangeRateToEur)
+                          ? getTotalCost(qd) * qd.exchangeRateToEur
+                          : getTotalCost(qd);
+                      };
+                      const comparableTotal = getComparableCost(quote);
+                      if (group.length > 1) {
+                        const costs = group.map(getComparableCost);
+                        const minGroupCost = Math.min(...costs);
+                        const eurSuffix = thisIsEurBase && d.currency !== 'EUR' ? ' EUR' : ` ${d.currency}`;
+                        if (comparableTotal === minGroupCost) parts.push(`menor custo total (${comparableTotal.toFixed(2)}${eurSuffix})`);
+                        else { const pct = ((comparableTotal - minGroupCost) / minGroupCost * 100).toFixed(0); parts.push(`custo ${pct}% acima do menor valor (${minGroupCost.toFixed(2)}${eurSuffix})`); }
                       }
                       const ttList = quotations.filter(q => q.extractedData.transitTime != null);
                       if (ttList.length > 1 && d.transitTime != null) {

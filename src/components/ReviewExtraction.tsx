@@ -1,11 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ExtractionData } from '@/lib/types';
 import { getTotalCost } from '@/lib/scoring';
 import { formatDate } from '@/lib/utils';
-import { CheckCircle, Clock, Package } from 'lucide-react';
+import { CheckCircle, Clock, Package, RefreshCw, AlertCircle } from 'lucide-react';
 import { volumetricWeightFromVolume, billedWeight } from '@/lib/volumetric';
+
+// Moedas que precisam de conversão para EUR (outras moedas europeias fora do Eurozone)
+const NON_EUR_CURRENCIES = ['SEK', 'CHF', 'NOK', 'DKK', 'GBP', 'PLN', 'CZK', 'HUF'];
+
+interface PtaxResult {
+  rate: number;
+  date: string;
+  source: string;
+  fromBRL: number;
+  toBRL: number;
+}
+
+async function fetchExchangeRate(from: string): Promise<PtaxResult | null> {
+  try {
+    const res = await fetch(`/api/exchange-rate?from=${from}&to=EUR`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
 
 interface ReviewExtractionProps {
   data: ExtractionData;
@@ -55,6 +76,44 @@ export function ReviewExtraction({
   showActions = true,
 }: ReviewExtractionProps) {
   const [local, setLocal] = useState<ExtractionData>(data);
+  const [ptax, setPtax] = useState<PtaxResult | null>(null);
+  const [ptaxLoading, setPtaxLoading] = useState(false);
+  const [ptaxError, setPtaxError] = useState('');
+  const prevCurrency = useRef('');
+
+  // Busca taxa BCB PTAX automaticamente quando a moeda muda para uma não-EUR
+  useEffect(() => {
+    const cur = local.currency?.toUpperCase() ?? '';
+    if (cur === prevCurrency.current) return;
+    prevCurrency.current = cur;
+
+    if (!cur || cur === 'EUR' || !NON_EUR_CURRENCIES.includes(cur)) {
+      setPtax(null);
+      setPtaxError('');
+      // Remove taxa se voltou para EUR ou moeda sem conversão
+      setLocal(prev => ({ ...prev, exchangeRateToEur: undefined }));
+      return;
+    }
+
+    let cancelled = false;
+    setPtaxLoading(true);
+    setPtaxError('');
+    fetchExchangeRate(cur).then(result => {
+      if (cancelled) return;
+      setPtaxLoading(false);
+      if (result?.rate) {
+        setPtax(result);
+        setLocal(prev => {
+          const next = { ...prev, exchangeRateToEur: result.rate };
+          onDataChange?.(next);
+          return next;
+        });
+      } else {
+        setPtaxError(`Não foi possível obter a taxa ${cur}/EUR do BCB PTAX.`);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [local.currency]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (patch: Partial<ExtractionData>) => {
     let next = { ...local, ...patch };
@@ -192,6 +251,85 @@ export function ReviewExtraction({
             />
           </div>
         </div>
+
+        {/* Conversão para EUR via BCB PTAX — aparece para moedas não-EUR conhecidas */}
+        {local.currency && NON_EUR_CURRENCIES.includes(local.currency.toUpperCase()) && (
+          <div className="border border-blue-200 rounded-lg p-3 bg-blue-50 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                Conversão para EUR — BCB PTAX
+              </p>
+              {!ptaxLoading && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    prevCurrency.current = '';
+                    setLocal(prev => ({ ...prev })); // re-trigger effect via re-render
+                    const cur = local.currency?.toUpperCase() ?? '';
+                    if (!cur || !NON_EUR_CURRENCIES.includes(cur)) return;
+                    setPtaxLoading(true);
+                    setPtaxError('');
+                    fetchExchangeRate(cur).then(result => {
+                      setPtaxLoading(false);
+                      if (result?.rate) {
+                        setPtax(result);
+                        setLocal(prev => {
+                          const next = { ...prev, exchangeRateToEur: result.rate };
+                          onDataChange?.(next);
+                          return next;
+                        });
+                      } else {
+                        setPtaxError(`Não foi possível obter a taxa ${cur}/EUR.`);
+                      }
+                    });
+                  }}
+                  className="text-blue-500 hover:text-blue-700 transition"
+                  title="Atualizar taxa"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {ptaxLoading && (
+              <p className="text-xs text-blue-500 flex items-center gap-1.5">
+                <RefreshCw className="w-3 h-3 animate-spin" /> Consultando BCB PTAX…
+              </p>
+            )}
+
+            {ptaxError && (
+              <p className="text-xs text-red-600 flex items-center gap-1.5">
+                <AlertCircle className="w-3 h-3" /> {ptaxError}
+              </p>
+            )}
+
+            {ptax && local.exchangeRateToEur && (
+              <div className="space-y-1.5">
+                <div className="bg-white rounded-lg px-3 py-2 border border-blue-100 font-mono text-xs space-y-0.5">
+                  <p className="text-gray-500">
+                    1 {local.currency} = {local.exchangeRateToEur.toFixed(6)} EUR
+                    <span className="ml-2 text-blue-400">(cotação de {ptax.date})</span>
+                  </p>
+                  <p className="text-gray-500 text-[10px]">
+                    {local.currency}/BRL: {ptax.fromBRL.toFixed(4)} · EUR/BRL: {ptax.toBRL.toFixed(4)} · Fonte: {ptax.source}
+                  </p>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm text-gray-700">
+                    {getTotalCost(local).toFixed(2)} <span className="font-medium text-gray-900">{local.currency}</span>
+                  </span>
+                  <span className="text-gray-400">≈</span>
+                  <span className="text-base font-bold text-blue-700">
+                    {(getTotalCost(local) * local.exchangeRateToEur).toFixed(2)} EUR
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-500">
+                  Esta cotação será comparada com as cotações em EUR no ranking.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Peso e Volume — editáveis */}
         <div className="border-t border-gray-100 pt-4 grid grid-cols-2 gap-4">

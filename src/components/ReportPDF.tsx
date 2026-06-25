@@ -143,7 +143,15 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
   const best = sorted[0];
   const second = sorted[1];
   const cur = best?.extractedData.currency || 'USD';
+  const hasCrossCurrency = sorted.some(q => q.extractedData.exchangeRateToEur && q.extractedData.currency !== 'EUR');
   const date = new Date().toLocaleDateString('pt-BR');
+
+  // Retorna custo em EUR equivalente (para cross-currency)
+  const eurTotal = (q: Quotation) => {
+    const t = getTotalCost(q.extractedData);
+    const d = q.extractedData;
+    return d.exchangeRateToEur && d.currency !== 'EUR' ? t * d.exchangeRateToEur : t;
+  };
   const reportId = `BP-${new Date().getFullYear()}-${String(quotations.length).padStart(3, '0')}`;
 
   const getRoute = (name: string) => { const m = name.match(/\(([^)]+)\)/); return m ? m[1] : '-'; };
@@ -287,7 +295,11 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
           <View style={s.tGroupHdr}>
             <View style={{ width: s.cAgent.width + s.cModal.width }}><Text style={s.th}> </Text></View>
             <View style={{ flex: 1, borderLeftWidth: 0.5, borderLeftColor: '#2d6b82' }}>
-              <Text style={s.th}>◄── BREAKDOWN DE CUSTOS ({cur}) — cada componente separado ──►</Text>
+              <Text style={s.th}>
+                {hasCrossCurrency
+                  ? '◄── BREAKDOWN DE CUSTOS (moeda original por linha — convertido p/ EUR no ranking) ──►'
+                  : `◄── BREAKDOWN DE CUSTOS (${cur}) — cada componente separado ──►`}
+              </Text>
             </View>
             <View style={{ width: 84, borderLeftWidth: 0.5, borderLeftColor: '#2d6b82' }}><Text style={s.th}>OPERAÇÃO</Text></View>
             <View style={{ width: 52, borderLeftWidth: 0.5, borderLeftColor: '#2d6b82' }}><Text style={s.th}>MARÍTIMO</Text></View>
@@ -350,7 +362,14 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                   <View style={s.cSm}><Text style={s.td}>{d.pickupCost ? d.pickupCost.toFixed(2) : '-'}</Text></View>
                   <View style={s.cSm}><Text style={s.td}>{d.otherCharges ? d.otherCharges.toFixed(2) : '-'}</Text></View>
                   <View style={s.cTot}>
-                    <Text style={[s.tdBold, { color: isBest ? GOLD : NAVY }]}>{total.toFixed(2)}</Text>
+                    <Text style={[s.tdBold, { color: isBest ? GOLD : NAVY }]}>
+                      {d.currency} {total.toFixed(2)}
+                    </Text>
+                    {d.exchangeRateToEur && d.currency !== 'EUR' && (
+                      <Text style={{ fontSize: 5.5, color: '#1d4ed8', fontWeight: 'bold', textAlign: 'center', marginTop: 1 }}>
+                        {'≈ EUR '}{(total * d.exchangeRateToEur).toFixed(2)}
+                      </Text>
+                    )}
                     {d.localChargesBRL && (
                       <Text style={{ fontSize: 5.5, color: '#16a34a', fontWeight: 'bold', marginTop: 1.5 }}>
                         + R$ {d.localChargesBRL.toFixed(2)}
@@ -418,7 +437,10 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                   {[
                     ['Agente / Companhia:', best.extractedData.agentName.split(' - ')[0]],
                     ['Rota:', getRoute(best.extractedData.agentName)],
-                    ['Total Geral:', `${cur} ${getTotalCost(best.extractedData).toFixed(2)}`],
+                    ['Total Geral:', `${best.extractedData.currency} ${getTotalCost(best.extractedData).toFixed(2)}`],
+                    ...(best.extractedData.exchangeRateToEur && best.extractedData.currency !== 'EUR'
+                      ? [['Equiv. EUR:', `EUR ${eurTotal(best).toFixed(2)} (tx: ${best.extractedData.exchangeRateToEur.toFixed(5)})`]]
+                      : []),
                     ...(best.extractedData.localChargesBRL ? [['Taxas Brasil:', `R$ ${best.extractedData.localChargesBRL.toFixed(2)}`]] : []),
                     ['Transit Time:', best.extractedData.transitTime ? (best.extractedData.transitTimeMax && best.extractedData.transitTimeMax !== best.extractedData.transitTime ? `${best.extractedData.transitTime}–${best.extractedData.transitTimeMax} dias` : `${best.extractedData.transitTime} dias`) : '-'],
                     ['Score Operacional:', (best.score ?? 0).toFixed(2)],
@@ -441,7 +463,10 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                     {[
                       ['Agente / Companhia:', second.extractedData.agentName.split(' - ')[0]],
                       ['Rota:', getRoute(second.extractedData.agentName)],
-                      ['Total Geral:', `${cur} ${getTotalCost(second.extractedData).toFixed(2)}`],
+                      ['Total Geral:', `${second.extractedData.currency} ${getTotalCost(second.extractedData).toFixed(2)}`],
+                      ...(second.extractedData.exchangeRateToEur && second.extractedData.currency !== 'EUR'
+                        ? [['Equiv. EUR:', `EUR ${eurTotal(second).toFixed(2)}`]]
+                        : []),
                       ...(second.extractedData.localChargesBRL ? [['Taxas Brasil:', `R$ ${second.extractedData.localChargesBRL.toFixed(2)}`]] : []),
                       ['Transit Time:', second.extractedData.transitTime ? (second.extractedData.transitTimeMax && second.extractedData.transitTimeMax !== second.extractedData.transitTime ? `${second.extractedData.transitTime}–${second.extractedData.transitTimeMax} dias` : `${second.extractedData.transitTime} dias`) : '-'],
                       ['Score Operacional:', (second.score ?? 0).toFixed(2)],
@@ -453,18 +478,20 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
                 )}
                 {/* Comparativo */}
                 {second && (() => {
-                  const b = getTotalCost(best.extractedData);
-                  const s2 = getTotalCost(second.extractedData);
+                  const b = hasCrossCurrency ? eurTotal(best) : getTotalCost(best.extractedData);
+                  const s2 = hasCrossCurrency ? eurTotal(second) : getTotalCost(second.extractedData);
+                  const compCur = hasCrossCurrency ? 'EUR' : cur;
                   const diff = Math.abs(b - s2);
                   const pct = ((diff / Math.max(b, s2)) * 100).toFixed(1);
                   return (
                     <View style={[s.decCol, { backgroundColor: WHITE, borderRadius: 3, padding: 5, borderWidth: 0.5, borderColor: BORDER }]}>
                       <Text style={s.decColTitle}>COMPARATIVO FINANCEIRO</Text>
                       {[
-                        ['Melhor Opção:', `${cur} ${b.toFixed(2)}`],
-                        ['Segundo Lugar:', `${cur} ${s2.toFixed(2)}`],
-                        ['Diferença (EUR):', `${cur} ${diff.toFixed(2)}`],
+                        ['Melhor Opção:', `${compCur} ${b.toFixed(2)}`],
+                        ['Segundo Lugar:', `${compCur} ${s2.toFixed(2)}`],
+                        [`Diferença (${compCur}):`, `${compCur} ${diff.toFixed(2)}`],
                         ['Diferença (%):', `${pct}%`],
+                        ...(hasCrossCurrency ? [['Base:', 'BCB PTAX']] : []),
                       ].map(([l, v]) => (
                         <View key={l} style={s.decRow}><Text style={s.decLabel}>{l}</Text><Text style={s.decValue}>{v}</Text></View>
                       ))}
@@ -482,25 +509,40 @@ export function ReportPDF({ quotations, cargo }: ReportPDFProps) {
               <View style={[s.rankRow, { borderBottomWidth: 1, borderBottomColor: NAVY }]}>
                 <Text style={[s.bLabel, { width: 22, fontWeight: 'bold' }]}>RANK</Text>
                 <Text style={[s.bLabel, { flex: 1, fontWeight: 'bold' }]}>AGENTE</Text>
-                <Text style={[s.bLabel, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>TOTAL ({cur})</Text>
+                <Text style={[s.bLabel, { width: 52, textAlign: 'right', fontWeight: 'bold' }]}>
+                  {hasCrossCurrency ? 'TOTAL (EUR)' : `TOTAL (${cur})`}
+                </Text>
                 <Text style={[s.bLabel, { width: 26, textAlign: 'right', fontWeight: 'bold' }]}>SCORE</Text>
               </View>
-              {sorted.slice(0, 7).map(q => (
-                <View key={q.id}>
-                  <View style={[s.rankRow, q.ranking === 1 ? { backgroundColor: GOLD_BG } : {}]}>
-                    <Text style={[s.bLabel, { width: 22, color: q.ranking === 1 ? GOLD : GRAY }]}>#{q.ranking}</Text>
-                    <Text style={[s.bLabel, { flex: 1 }]}>{q.extractedData.agentName.split(' - ')[0].slice(0, 16)}</Text>
-                    <Text style={[s.bValue, { width: 52, textAlign: 'right', fontSize: 6 }]}>{getTotalCost(q.extractedData).toFixed(2)}</Text>
-                    <Text style={[s.bValue, { width: 26, textAlign: 'right', fontSize: 6, color: sc(q.score ?? 0) }]}>{(q.score ?? 0).toFixed(2)}</Text>
-                  </View>
-                  {q.extractedData.localChargesBRL && (
-                    <View style={[s.rankRow, { backgroundColor: '#f0fdf4', paddingLeft: 30 }]}>
-                      <Text style={[s.bLabel, { flex: 1, fontSize: 5.5, color: '#16a34a' }]}>+ Taxas BRL:</Text>
-                      <Text style={[s.bValue, { width: 52, textAlign: 'right', fontSize: 5.5, color: '#16a34a' }]}>R$ {q.extractedData.localChargesBRL.toFixed(2)}</Text>
+              {sorted.slice(0, 7).map(q => {
+                const qd = q.extractedData;
+                const qTotal = getTotalCost(qd);
+                const qEur = eurTotal(q);
+                const isConverted = !!qd.exchangeRateToEur && qd.currency !== 'EUR';
+                return (
+                  <View key={q.id}>
+                    <View style={[s.rankRow, q.ranking === 1 ? { backgroundColor: GOLD_BG } : {}]}>
+                      <Text style={[s.bLabel, { width: 22, color: q.ranking === 1 ? GOLD : GRAY }]}>#{q.ranking}</Text>
+                      <Text style={[s.bLabel, { flex: 1 }]}>{qd.agentName.split(' - ')[0].slice(0, 16)}</Text>
+                      <View style={{ width: 52, alignItems: 'flex-end' }}>
+                        <Text style={[s.bValue, { fontSize: 6 }]}>
+                          {hasCrossCurrency ? `EUR ${qEur.toFixed(2)}` : qTotal.toFixed(2)}
+                        </Text>
+                        {isConverted && (
+                          <Text style={{ fontSize: 4.5, color: GRAY }}>{qd.currency} {qTotal.toFixed(2)}</Text>
+                        )}
+                      </View>
+                      <Text style={[s.bValue, { width: 26, textAlign: 'right', fontSize: 6, color: sc(q.score ?? 0) }]}>{(q.score ?? 0).toFixed(2)}</Text>
                     </View>
-                  )}
-                </View>
-              ))}
+                    {qd.localChargesBRL && (
+                      <View style={[s.rankRow, { backgroundColor: '#f0fdf4', paddingLeft: 30 }]}>
+                        <Text style={[s.bLabel, { flex: 1, fontSize: 5.5, color: '#16a34a' }]}>+ Taxas BRL:</Text>
+                        <Text style={[s.bValue, { width: 52, textAlign: 'right', fontSize: 5.5, color: '#16a34a' }]}>R$ {qd.localChargesBRL.toFixed(2)}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
         </View>

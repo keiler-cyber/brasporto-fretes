@@ -19,7 +19,7 @@ describe('scoring', () => {
     expect(getEffectiveCost(quotation)).toBe(1225);
   });
 
-  it('should use 1-to-1 comparison for FCL quotes', () => {
+  it('should score cheaper FCL quote higher (same currency)', () => {
     const quotations: ExtractionData[] = [
       {
         agentName: 'FCL Agent',
@@ -44,7 +44,8 @@ describe('scoring', () => {
     ];
 
     const scores = calculateScoring(quotations);
-    expect(scores.get('FCL Agent')).toBeGreaterThan(scores.get('FCL Agent 2'));
+    // índice 0 = FCL Agent (mais barato), índice 1 = FCL Agent 2 (mais caro)
+    expect(scores[0]).toBeGreaterThan(scores[1]);
   });
 
   it('should use cost per m³ for LCL when measurement exists', () => {
@@ -98,40 +99,32 @@ describe('scoring', () => {
     expect(effective).toBeCloseTo(1200 / (1 * 166.67), 3);
   });
 
-  it('should prefer a quote that matches requested transit time and free time even if slightly more expensive', () => {
+  it('should compare SEK and EUR quotes together when exchangeRateToEur is set', () => {
     const quotations: ExtractionData[] = [
       {
-        agentName: 'Cheap Agent',
-        modal: 'FCL',
-        baseCost: 1000,
-        currency: 'USD',
-        pickupCost: 100,
-        originCharges: 50,
-        otherCharges: 50,
-        transitTime: 20,
-        freeTime: 5,
-        rawData: 'cheap',
+        // Agente EUR mais caro
+        agentName: 'EUR Agent',
+        modal: 'AEREO',
+        baseCost: 3350,
+        currency: 'EUR',
+        weight: 500,
+        rawData: 'eur',
       },
       {
-        agentName: 'Requested Agent',
-        modal: 'FCL',
-        baseCost: 1100,
-        currency: 'USD',
-        pickupCost: 100,
-        originCharges: 50,
-        otherCharges: 50,
-        transitTime: 15,
-        freeTime: 7,
-        rawData: 'requested',
+        // Agente sueco em SEK — mais barato quando convertido (12797 SEK × 0.087 ≈ 1113 EUR)
+        agentName: 'SEK Agent',
+        modal: 'AEREO',
+        baseCost: 12797,
+        currency: 'SEK',
+        exchangeRateToEur: 0.087,
+        weight: 500,
+        rawData: 'sek',
       },
     ];
 
-    const scores = calculateScoring(quotations, {
-      requestedModal: 'FCL',
-      requestedTransitTime: 18,
-      requestedFreeTime: 6,
-    });
-
-    expect(scores.get('Requested Agent')).toBeGreaterThan(scores.get('Cheap Agent'));
+    const scores = calculateScoring(quotations);
+    // SEK Agent convertido (≈1113 EUR) é mais barato que EUR Agent (3350 EUR)
+    // logo deve ter score maior
+    expect(scores[1]).toBeGreaterThan(scores[0]);
   });
 });

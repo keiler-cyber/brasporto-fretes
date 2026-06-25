@@ -68,23 +68,42 @@ function frequencyScore(freq?: string): number {
   return 0.5;
 }
 
+// Cotações em EUR e cotações com exchangeRateToEur entram no mesmo grupo de comparação
+const EUR_BASE = '__EUR__';
+
+function getGroupKey(q: ExtractionData): string {
+  if (q.currency === 'EUR') return EUR_BASE;
+  if (q.exchangeRateToEur && q.exchangeRateToEur > 0) return EUR_BASE;
+  return q.currency;
+}
+
+// Custo efetivo convertido para EUR quando exchangeRateToEur está preenchido
+export function convertedEffectiveCost(q: ExtractionData): number {
+  const cost = getEffectiveCost(q);
+  if (q.currency !== 'EUR' && q.exchangeRateToEur && q.exchangeRateToEur > 0) {
+    return cost * q.exchangeRateToEur;
+  }
+  return cost;
+}
+
 // ─── SCORING PRINCIPAL ────────────────────────────────────────────────────────
 // Retorna array de scores indexado igual ao array de quotations
-// CORRIGE o bug de agentName duplicado (Map com chave = nome da empresa)
+// Cotações com exchangeRateToEur entram no grupo EUR e competem diretamente
 
 export function calculateScoring(quotations: ExtractionData[]): number[] {
   if (quotations.length === 0) return [];
 
-  // Ranges de custo por moeda
-  const currencyGroups = quotations.reduce<Record<string, number[]>>((acc, q) => {
-    const c = getEffectiveCost(q);
-    (acc[q.currency] = acc[q.currency] || []).push(c);
+  // Ranges de custo por grupo (moeda ou EUR-base para cross-currency)
+  const groupCosts = quotations.reduce<Record<string, number[]>>((acc, q) => {
+    const key = getGroupKey(q);
+    const cost = convertedEffectiveCost(q);
+    (acc[key] = acc[key] || []).push(cost);
     return acc;
   }, {});
   const currencyRange: Record<string, { min: number; max: number }> = {};
-  for (const [cur, vals] of Object.entries(currencyGroups)) {
+  for (const [key, vals] of Object.entries(groupCosts)) {
     const v = vals.filter(x => x > 0);
-    currencyRange[cur] = { min: Math.min(...v) || 0, max: Math.max(...v) || 1 };
+    currencyRange[key] = { min: Math.min(...v) || 0, max: Math.max(...v) || 1 };
   }
 
   // Ranges de transit time
@@ -98,8 +117,9 @@ export function calculateScoring(quotations: ExtractionData[]): number[] {
   const maxFT = fts.length > 0 ? Math.max(...fts) : 1;
 
   return quotations.map(q => {
-    const range = currencyRange[q.currency] || { min: 0, max: 1 };
-    const costScore = 1 - normalizeValue(getEffectiveCost(q), range.min, range.max);
+    const key = getGroupKey(q);
+    const range = currencyRange[key] || { min: 0, max: 1 };
+    const costScore = 1 - normalizeValue(convertedEffectiveCost(q), range.min, range.max);
     const ttScore   = q.transitTime != null ? 1 - normalizeValue(q.transitTime, minTT, maxTT) : 0;
     const etdScore  = q.etd ? 1 : 0;
     const ftScore   = q.freeTime ? normalizeValue(q.freeTime, minFT, maxFT) : 0;

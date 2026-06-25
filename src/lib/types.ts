@@ -55,6 +55,7 @@ export interface ExtractionData {
   weight?: number;
   measurement?: number;
   destinationAirport?: string; // aeroporto/porto destino quando há múltiplas opções (ex: "GRU", "VCP")
+  exchangeRateToEur?: number; // taxa de câmbio para EUR: permite comparar cotações em SEK/CHF/NOK com cotações em EUR no mesmo ranking
   rawData: string; // Dados brutos do PDF
 }
 
